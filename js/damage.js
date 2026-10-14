@@ -5,8 +5,9 @@ import { floatText, burst, addShake } from './effects.js';
 
 export function initDamage(g) {
   g.health = CONFIG.damage.maxHealth;
+  // Repair color, or -1 during a no-repair window. Levels start with one.
   g.repairColor = Math.floor(Math.random() * g.colors);
-  g.repairTimer = CONFIG.damage.repairRotate;
+  g.repairTimer = CONFIG.damage.repairOnTime;
   g.hurtFlash = 0;
   g.damageBy = { wall: 0, boost: 0, hit: 0, squeeze: 0, drain: 0 }; // for tuning / debug
 }
@@ -82,19 +83,27 @@ export function updateDamage(g, dt) {
     burst(g.fx, p.x, p.y, frac < 0.25 ? '#3a3a3a' : '#8a8f99', 1, 1.2, 0.9, 0.35);
   }
 
-  if (g.colors > 1 && (g.repairTimer -= dt) <= 0) {
-    let next = g.repairColor;
-    while (next === g.repairColor) next = Math.floor(Math.random() * g.colors);
-    g.repairColor = next;
-    g.repairTimer = D.repairRotate;
-    g.onRepairChange?.(next);
+  // Alternate repair windows: a color for repairOnTime, then none for
+  // repairOffTime, then a different color.
+  if ((g.repairTimer -= dt) <= 0) {
+    if (g.repairColor >= 0) {
+      g.lastRepairColor = g.repairColor;
+      g.repairColor = -1;
+      g.repairTimer = D.repairOffTime;
+    } else {
+      let next = Math.floor(Math.random() * g.colors);
+      if (g.colors > 1) while (next === g.lastRepairColor) next = Math.floor(Math.random() * g.colors);
+      g.repairColor = next;
+      g.repairTimer = D.repairOnTime;
+    }
+    g.onRepairChange?.(g.repairColor);
   }
   return g.health <= 0;
 }
 
 // Heal for an exploded group if it was the repair color.
 export function repairFrom(g, color, n, x, y) {
-  if (!CONFIG.features.damage || color !== g.repairColor) return;
+  if (!CONFIG.features.damage || color < 0 || color !== g.repairColor) return;
   const D = CONFIG.damage;
   const before = g.health;
   g.health = Math.min(D.maxHealth, g.health + n * D.healPerCar);
