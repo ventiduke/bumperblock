@@ -23,8 +23,8 @@ export function burst(fx, x, y, color, count, speed = 7, life = 0.6, size = 0.22
   }
 }
 
-export function floatText(fx, x, y, text) {
-  fx.texts.push({ x, y, text, life: 1.0 });
+export function floatText(fx, x, y, text, color = '#ffffff') {
+  fx.texts.push({ x, y, text, color, life: 1.0 });
 }
 
 export function addShake(fx, amount) {
