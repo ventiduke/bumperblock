@@ -3,9 +3,9 @@ import { CONFIG } from '../config.js';
 import { createWorld, areaClear } from './physics.js';
 import { createTerrain } from './terrain.js';
 import { createPlayer, updatePlayer, updateStuck, tryBoost } from './player.js';
-import { createAI, updateAI, stunAI } from './ai.js';
-import { createSpawner, updateSpawner, spawnInterval } from './spawner.js';
-import { updateMatches, scoreFor } from './match.js';
+import { createVehicle, vehicleLength, updateAI, stunAI } from './ai.js';
+import { createSpawner, updateSpawner, spawnInterval, pickType } from './spawner.js';
+import { updateMatches, scoreFor, groupWeight, typeCount } from './match.js';
 import { createEffects, burst, floatText, addShake, updateEffects } from './effects.js';
 import { createRenderer, render, updateCamera } from './render.js';
 import { createInput } from './input.js';
@@ -13,6 +13,7 @@ import { createHUD } from './hud.js';
 import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
 import { initDamage, impactDamage, updateDamage, repairFrom } from './damage.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
+import { initAbilities, useAbility, cycleAbility, updateAbilities } from './abilities.js';
 
 const pl = window.planck;
 const params = new URLSearchParams(location.search);
@@ -21,9 +22,12 @@ const DEBUG = params.get('debug') === '1';
 const canvas = document.getElementById('game');
 const renderer = createRenderer(canvas);
 const hud = createHUD();
-const input = createInput(canvas, hud.el.boostBtn);
+const input = createInput(canvas, hud.el.boostBtn, hud.el.abilityBtn, hud.el.cycleBtn);
 
 let game = null;
+// The equipped ability carries across levels and retries.
+let equipped = new URLSearchParams(location.search).get('ability');
+if (!CONFIG.abilities.list.includes(equipped)) equipped = null;
 
 function emptyMatchInfo() {
   return { links: [], playerLinks: [], groups: [], primed: [], ready: [] };
@@ -57,6 +61,7 @@ function newGame(levelIndex = 0, startScore = 0) {
   g.onRepairChange = (c) => (c >= 0 ? hud.announce('Repair color', CONFIG.colors[c]) : hud.announce('No repairs for now'));
   createTerrain(world);
   g.player = createPlayer(world);
+  initAbilities(g.player, equipped);
   world.on('pre-solve', (contact) => recordApproach(contact));
   world.on('post-solve', (contact, impulse) => onImpact(g, contact, impulse));
 
@@ -67,8 +72,12 @@ function newGame(levelIndex = 0, startScore = 0) {
     const x = 1.5 + Math.random() * (W - 3);
     const y = 1.5 + Math.random() * (H - 3);
     if (Math.hypot(x - pp.x, y - pp.y) < 4.5) continue;
-    if (!areaClear(world, x, y, 1.6)) continue;
-    g.cars.push(createAI(world, x, y, Math.random() * Math.PI * 2, Math.floor(Math.random() * g.colors)));
+    const type = pickType(g);
+    if (!areaClear(world, x, y, Math.max(1.6, vehicleLength(type) / 2 + 0.4))) continue;
+    // Long vehicles: centre the whole length on (x, y).
+    const a = Math.random() * Math.PI * 2;
+    const back = (vehicleLength(type) - CONFIG.vehicles[type].length) / 2;
+    g.cars.push(...createVehicle(world, x + Math.cos(a) * back, y + Math.sin(a) * back, a, Math.floor(Math.random() * g.colors), type));
   }
   return g;
 }
@@ -163,17 +172,25 @@ function explode(g, group) {
     g.world.destroyBody(car.body);
   }
   g.cars = g.cars.filter((c) => !c.dead);
+  if (g.player.towed?.dead) { // the rope went with the exploded car
+    g.player.towed = null;
+    g.player.towJoint = null;
+    g.player.abilityTime = 0;
+  }
 
   const color = group[0].color;
-  g.cleared.total += group.length;
-  g.cleared.byColor[color] = (g.cleared.byColor[color] || 0) + group.length;
-  repairFrom(g, color, group.length, cx, cy);
+  const weight = groupWeight(group);
+  g.cleared.total += weight;
+  g.cleared.byColor[color] = (g.cleared.byColor[color] || 0) + weight;
+  repairFrom(g, color, weight, cx, cy);
 
   g.combo = g.comboTimer > 0 ? g.combo + 1 : 1;
   g.comboTimer = M.comboWindow;
-  const pts = scoreFor(group.length, g.combo) + junk * CONFIG.pileup.pointsPerJunk;
+  const convoy = typeCount(group) >= CONFIG.convoy.types;
+  const pts = Math.round(scoreFor(weight, g.combo) * (convoy ? CONFIG.convoy.mult : 1)) + junk * CONFIG.pileup.pointsPerJunk;
   g.score += pts;
   floatText(g.fx, cx, cy, g.combo > 1 ? `+${pts} x${g.combo}` : `+${pts}`);
+  if (convoy) floatText(g.fx, cx, cy - 1, 'CONVOY!', '#ffd23f');
   if (junk) floatText(g.fx, cx, cy + 1, `${junk} junk cleared`, '#c9ced8');
   addShake(g.fx, 0.12 + 0.03 * group.length);
 
@@ -217,6 +234,12 @@ function step(g, dt) {
   }
   const p = g.player;
   if (input.consumeBoost()) tryBoost(p);
+  if (input.consumeCycle()) {
+    cycleAbility(g);
+    equipped = p.ability;
+  }
+  if (input.consumeAbility()) useAbility(g);
+  updateAbilities(g, dt);
   updatePlayer(p, dt, input.steer(), input.brake());
   for (const car of g.cars) {
     updateAI(car, dt, g.world, g);
@@ -353,10 +376,12 @@ window.bumper = {
   nextLevel,
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },
   areaClear: (x, y, half) => areaClear(game.world, x, y, half),
-  spawnAt(color, x, y, angle = 0) {
-    const car = createAI(game.world, x, y, angle, color);
-    game.cars.push(car);
-    return car;
+  pickType: () => pickType(game),
+  // Spawns a vehicle; returns its first body (the cab for a semi).
+  spawnAt(color, x, y, angle = 0, type = 'car') {
+    const bodies = createVehicle(game.world, x, y, angle, color, type);
+    game.cars.push(...bodies);
+    return bodies[0];
   },
 };
 

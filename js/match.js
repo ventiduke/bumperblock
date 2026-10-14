@@ -57,6 +57,20 @@ export function updateMatches(game, dt) {
     }
   }
 
+  // Tow: the car on your rope counts as touching you (the rope is part of
+  // your chain), so you can deliver a car into a group.
+  const towed = game.player?.towed;
+  if (towed && !towed.dead) nearPlayer.add(towed);
+
+  // A semi's cab and trailer always act as one unit.
+  for (const car of cars) {
+    if (!car.trailer || car.trailer.dead || car.color < 0 || car.trailer.color !== car.color) continue;
+    const i = index.get(car), j = index.get(car.trailer);
+    if (i === undefined || j === undefined) continue;
+    const ra = find(parent, i), rb = find(parent, j);
+    if (ra !== rb) parent[ra] = rb;
+  }
+
   // Chain mode: the player is a wildcard link, joining every same-color car
   // it touches into one chain.
   if (M.mode === 'chain') {
@@ -86,8 +100,12 @@ export function updateMatches(game, dt) {
   const primed = [];
   const ready = [];
   let gid = 0;
+  // Chameleon: the player counts as one car for any group it touches.
+  const chameleon = game.player && game.player.chameleon > 0;
   for (const list of comps.values()) {
-    const qualifies = list.length >= M.minGroup;
+    const touchesPlayer = list.some((car) => nearPlayer.has(car));
+    const size = groupWeight(list) + (chameleon && touchesPlayer ? 1 : 0);
+    const qualifies = list[0].color >= 0 && size >= M.minGroup;
     const armed = qualifies && isArmed(list, M.mode, nearPlayer);
     for (const car of list) car.primed = qualifies && !armed;
     if (!armed) {
@@ -126,6 +144,18 @@ function isArmed(list, mode, nearPlayer) {
     if (mode === 'touch' ? nearPlayer.has(car) : car.tag > 0) return true;
   }
   return false;
+}
+
+// How much a group counts toward match size and goals (bus = 2, etc.).
+export function groupWeight(list) {
+  let n = 0;
+  for (const car of list) n += car.counts ?? 1;
+  return n;
+}
+
+// Distinct vehicle types in a group (a trailer counts as its semi).
+export function typeCount(list) {
+  return new Set(list.map((c) => (c.type === 'trailer' ? 'semi' : c.type))).size;
 }
 
 export function scoreFor(n, combo) {

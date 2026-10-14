@@ -212,7 +212,7 @@ export function render(r, game, debug) {
   const base = ctx.getTransform();
   for (const car of game.cars) {
     if (!visible(car.body.getPosition())) continue;
-    drawCar(ctx, car, L, CW, now, repairColor);
+    drawCar(ctx, car, now, repairColor);
     ctx.setTransform(base);
   }
   if (game.player) drawPlayer(ctx, game.player, L, CW, game);
@@ -292,15 +292,17 @@ function drawMinimap(ctx, r, game, view, margin) {
   ctx.restore();
 }
 
-function carBody(ctx, L, CW, fill, glass) {
+// Generic box body with shadow; windshield at the front (glass=null: none).
+function carBody(ctx, L, CW, fill, glass, glassFrom = 0.08) {
   ctx.fillStyle = 'rgba(0,0,0,0.32)';
   roundRect(ctx, -L / 2 + 0.08, -CW / 2 + 0.1, L, CW, 0.22);
   ctx.fill();
   ctx.fillStyle = fill;
   roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
   ctx.fill();
+  if (!glass) return;
   ctx.fillStyle = glass;
-  ctx.fillRect(L * 0.08, -CW * 0.36, L * 0.22, CW * 0.72);
+  ctx.fillRect(L * glassFrom, -CW * 0.36, Math.min(L * 0.22, 0.4), CW * 0.72);
 }
 
 function place(ctx, body) {
@@ -310,7 +312,72 @@ function place(ctx, body) {
   ctx.transform(c, s, -s, c, p.x, p.y);
 }
 
-function drawCar(ctx, car, L, CW, now, repairColor) {
+// Body shapes per vehicle type (local space, forward = +x).
+function drawBody(ctx, car, L, CW, fill, now) {
+  const glass = 'rgba(15,18,26,0.55)';
+  switch (car.type) {
+    case 'motorcycle':
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
+      roundRect(ctx, -L / 2 + 0.06, -CW / 2 + 0.08, L, CW, CW / 2);
+      ctx.fill();
+      ctx.fillStyle = fill;
+      roundRect(ctx, -L / 2, -CW / 2, L, CW, CW / 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a1d24'; // rider
+      ctx.beginPath();
+      ctx.arc(-L * 0.08, 0, CW * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(L * 0.3, -CW * 0.62, 0.08, CW * 1.24); // handlebars
+      break;
+    case 'bus':
+      carBody(ctx, L, CW, fill, glass, 0.37);
+      ctx.fillStyle = glass;
+      for (let x = -L / 2 + 0.35; x < L / 2 - 0.7; x += 0.5) {
+        ctx.fillRect(x, -CW / 2 + 0.08, 0.34, 0.16);
+        ctx.fillRect(x, CW / 2 - 0.24, 0.34, 0.16);
+      }
+      break;
+    case 'trailer':
+      carBody(ctx, L, CW, fill, null);
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+      ctx.lineWidth = 0.05;
+      ctx.beginPath();
+      for (let x = -L / 2 + 0.4; x < L / 2 - 0.2; x += 0.45) {
+        ctx.moveTo(x, -CW / 2 + 0.1);
+        ctx.lineTo(x, CW / 2 - 0.1);
+      }
+      ctx.stroke();
+      break;
+    case 'semi':
+      carBody(ctx, L, CW, fill, glass, 0.18);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; // exhaust stacks
+      ctx.fillRect(-L * 0.25, -CW / 2 - 0.06, 0.16, 0.12);
+      ctx.fillRect(-L * 0.25, CW / 2 - 0.06, 0.16, 0.12);
+      break;
+    case 'police': {
+      carBody(ctx, L, CW, fill, glass);
+      const on = Math.sin(now * 18) > 0;
+      ctx.fillStyle = on ? '#ff2d3d' : '#4b0d12';
+      ctx.fillRect(-L * 0.12, -CW * 0.38, 0.22, CW * 0.36);
+      ctx.fillStyle = on ? '#123066' : '#2d7bff';
+      ctx.fillRect(-L * 0.12, CW * 0.02, 0.22, CW * 0.36);
+      ctx.strokeStyle = '#ffffff'; // door stripe
+      ctx.lineWidth = 0.06;
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.42, CW / 2 - 0.04);
+      ctx.lineTo(L * 0.05, CW / 2 - 0.04);
+      ctx.moveTo(-L * 0.42, -CW / 2 + 0.04);
+      ctx.lineTo(L * 0.05, -CW / 2 + 0.04);
+      ctx.stroke();
+      break;
+    }
+    default:
+      carBody(ctx, L, CW, fill, glass);
+  }
+}
+
+function drawCar(ctx, car, now, repairColor) {
+  const L = car.length, CW = car.width;
   let tint = 0;
   if (car.groupId >= 0) {
     const t = Math.min(1, car.matchTimer / CONFIG.match.delay);
@@ -325,6 +392,12 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
     drawJunk(ctx, L, CW);
     return;
   }
+  if (car.towed) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 0.08;
+    roundRect(ctx, -L / 2 - 0.08, -CW / 2 - 0.08, L + 0.16, CW + 0.16, 0.28);
+    ctx.stroke();
+  }
   // Tagged by the player: orange outline that fades as the tag runs out.
   if (car.tag > 0 && CONFIG.match.mode === 'tagged') {
     ctx.strokeStyle = `rgba(255,159,28,${0.25 + 0.75 * Math.min(1, car.tag / CONFIG.match.tagTime)})`;
@@ -332,7 +405,7 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
     roundRect(ctx, -L / 2 - 0.1, -CW / 2 - 0.1, L + 0.2, CW + 0.2, 0.3);
     ctx.stroke();
   }
-  carBody(ctx, L, CW, CONFIG.colors[car.color], 'rgba(15,18,26,0.55)');
+  drawBody(ctx, car, L, CW, CONFIG.colors[car.color], now);
   // Rusting in a pile-up: browns over, and the outline blinks near the end.
   if (car.rust > 0) {
     const r = Math.min(1, car.rust / car.rustAt);
@@ -368,6 +441,7 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
 }
 
 function drawJunk(ctx, L, CW) {
+  // (sized per vehicle)
   carBody(ctx, L, CW, '#5d6270', 'rgba(15,18,26,0.6)');
   ctx.fillStyle = '#7a5a40';
   ctx.beginPath();
@@ -386,6 +460,19 @@ function drawJunk(ctx, L, CW) {
 
 function drawPlayer(ctx, pc, L, CW, game) {
   const p = pc.body.getPosition();
+  const now = game.elapsed;
+
+  // Tow rope, in world space.
+  if (pc.towed && !pc.towed.dead) {
+    const a = pc.body.getWorldPoint(window.planck.Vec2(-L / 2, 0));
+    const b = pc.towed.body.getWorldPoint(pc.towed.towEnd);
+    ctx.strokeStyle = '#e8e2d0';
+    ctx.lineWidth = 0.09;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
 
   // Stuck warning ring.
   if (pc.stuckTimer > 0.15) {
@@ -398,6 +485,8 @@ function drawPlayer(ctx, pc, L, CW, game) {
   }
 
   place(ctx, pc.body);
+  const baseAlpha = pc.phasing ? 0.4 + 0.15 * Math.sin(now * 30) : 1; // ghostly while phasing
+  ctx.globalAlpha = baseAlpha;
   if (pc.boostTime > 0) {
     ctx.fillStyle = Math.random() < 0.5 ? '#ffb347' : '#ff6b1c';
     ctx.beginPath();
@@ -407,6 +496,17 @@ function drawPlayer(ctx, pc, L, CW, game) {
     ctx.fill();
   }
   carBody(ctx, L, CW, '#f4f5f7', 'rgba(15,18,26,0.75)');
+  if (pc.chameleon > 0) {
+    // Shimmer through the colors in play.
+    const n = Math.max(1, game.colors);
+    const c = CONFIG.colors[Math.floor(now * 6) % n];
+    const keep = ctx.globalAlpha;
+    ctx.globalAlpha = keep * 0.6;
+    ctx.fillStyle = c;
+    roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
+    ctx.fill();
+    ctx.globalAlpha = keep;
+  }
   if (CONFIG.features.damage) {
     // Dents darken the body as health drops; red flash when hit or squeezed.
     const wear = 1 - Math.max(0, game.health) / CONFIG.damage.maxHealth;
@@ -418,11 +518,11 @@ function drawPlayer(ctx, pc, L, CW, game) {
       ctx.fill();
     }
     if (game.hurtFlash > 0) {
-      ctx.globalAlpha = Math.min(0.7, game.hurtFlash);
+      ctx.globalAlpha = baseAlpha * Math.min(0.7, game.hurtFlash);
       ctx.fillStyle = '#ff3b3b';
       roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
       ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = baseAlpha;
     }
   }
   if (pc.reversing) {
@@ -433,6 +533,7 @@ function drawPlayer(ctx, pc, L, CW, game) {
   ctx.fillStyle = '#ff9f1c';
   ctx.fillRect(-L / 2, -0.12, L * 0.58, 0.24);
   ctx.fillRect(L * 0.3, -0.12, L * 0.2, 0.24);
+  ctx.globalAlpha = 1;
 }
 
 function drawDebug(ctx, game) {

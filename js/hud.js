@@ -1,6 +1,7 @@
 // DOM HUD: score, combo, level goal, health + repair color, boost button
 // state, toasts, and the game-over / level-complete panels.
 import { CONFIG } from '../config.js';
+import { abilityLabel } from './abilities.js';
 
 export function createHUD() {
   const $ = (id) => document.getElementById(id);
@@ -14,6 +15,9 @@ export function createHUD() {
     healthFill: $('health-fill'),
     repair: $('repair'),
     boostBtn: $('boost'),
+    abilityBtn: $('ability'),
+    abilityLabel: $('ability-label'),
+    cycleBtn: $('ability-cycle'),
     gameover: $('gameover'),
     goTitle: $('go-title'),
     goLevel: $('go-level'),
@@ -87,6 +91,22 @@ export function createHUD() {
         }
         el.health.classList.toggle('hurt', game.hurtFlash > 0.15);
       }
+
+      // Ability: ring shows recharge, or time left (white) while active.
+      const pl = game.player;
+      const active = pl.abilityTime > 0 || !!pl.towed;
+      const A = CONFIG.abilities[pl.ability];
+      const ring = active ? Math.max(0, pl.abilityTime) / (pl.ability === 'tow' ? A.maxTime : A.duration) : pl.abilityCharge;
+      const rq = Math.round(Math.min(1, ring) * 50) / 50;
+      if (changed('abilityRing', rq)) el.abilityBtn.style.setProperty('--ability', rq);
+      const label = pl.towed ? 'DROP' : abilityLabel(pl.ability);
+      if (changed('abilityLabel', label)) el.abilityLabel.textContent = label;
+      if (changed('abilityActive', active)) {
+        el.abilityBtn.classList.toggle('active', active);
+        el.cycleBtn.classList.toggle('locked', active);
+      }
+      const aReady = active || pl.abilityCharge >= 1;
+      if (changed('abilityReady', aReady)) el.abilityBtn.classList.toggle('disabled', !aReady);
 
       const b = Math.round(game.player.boostCharge * 100) / 100;
       if (changed('boost', b)) document.documentElement.style.setProperty('--boost', b);

@@ -161,6 +161,48 @@ button {
   background: conic-gradient(var(--accent) calc(var(--boost) * 360deg), rgba(255, 255, 255, 0.15) 0);
   opacity: 0.9;
 }
+/* Ability slot mirrors boost on the left edge; the small button swaps it. */
+#ability {
+  position: fixed;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  top: calc(50% - 38px);
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: none;
+  padding: 6px;
+  background: conic-gradient(var(--ability-color, #8fd3ff) calc(var(--ability) * 360deg), rgba(255, 255, 255, 0.15) 0);
+  opacity: 0.9;
+}
+#ability span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(20, 22, 28, 0.85);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+#ability.disabled span { color: var(--muted); }
+#ability.active { --ability-color: #ffffff; }
+#ability.pressed, #ability-cycle.pressed { transform: scale(0.94); }
+#ability-cycle {
+  position: fixed;
+  left: calc(36px + env(safe-area-inset-left, 0px));
+  top: calc(50% + 46px);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 15px;
+  line-height: 1;
+}
+#ability-cycle.locked { opacity: 0.35; }
+
 #boost span {
   display: flex;
   align-items: center;

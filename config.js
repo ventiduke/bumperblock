@@ -13,8 +13,11 @@ export const CONFIG = {
   // stars. Goal is { total: N } (any colors) or { each: N } (N of every color).
   // Past the last level, it repeats with bigger goals and faster spawns.
   levels: [
-    { colors: 3, goal: { total: 15 }, par: 90, initialCars: 12, spawn: { startInterval: 1.8, minInterval: 0.8, rampTime: 90 } },
-    { colors: 4, goal: { each: 6 }, par: 120, initialCars: 14, spawn: { startInterval: 1.5, minInterval: 0.6, rampTime: 100 } },
+    // `types` (optional) sets the vehicle mix; otherwise vehicleMix is used.
+    { colors: 3, goal: { total: 15 }, par: 90, initialCars: 12, spawn: { startInterval: 1.8, minInterval: 0.8, rampTime: 90 },
+      types: { car: 70, motorcycle: 18, bus: 12 } },
+    { colors: 4, goal: { each: 6 }, par: 120, initialCars: 14, spawn: { startInterval: 1.5, minInterval: 0.6, rampTime: 100 },
+      types: { car: 60, motorcycle: 16, bus: 12, semi: 12 } },
     { colors: 4, goal: { total: 35 }, par: 140, initialCars: 16, spawn: { startInterval: 1.3, minInterval: 0.5, rampTime: 100 } },
     { colors: 5, goal: { each: 6 }, par: 170, initialCars: 16, spawn: { startInterval: 1.2, minInterval: 0.45, rampTime: 120 } },
     { colors: 6, goal: { each: 6 }, par: 200, initialCars: 18, spawn: { startInterval: 1.1, minInterval: 0.4, rampTime: 120 } },
@@ -96,6 +99,21 @@ export const CONFIG = {
     swipeMs: 350,
   },
 
+  // Second ability slot (left edge). One is equipped at a time; the small
+  // swap button (or Q) cycles through `list`. E / the button uses it.
+  abilities: {
+    list: ['chameleon', 'phase', 'tow'],
+    start: 'chameleon',
+    // Chameleon: your car counts as one car toward minGroup for any group it
+    // touches, so a pair + you explodes.
+    chameleon: { duration: 5, cooldown: 14 },
+    // Phase: pass through cars and blocks (not the arena walls). Stays on past
+    // `duration` while still overlapping something, up to maxExtend.
+    phase: { duration: 1.5, cooldown: 12, maxExtend: 1.5 },
+    // Tow: rope the nearest car within `range`; press again to drop it.
+    tow: { range: 3.5, ropeLength: 2.2, maxTime: 10, cooldown: 6 },
+  },
+
   boost: {
     speedMultiplier: 1.8,   // top speed multiplier while boosting
     accelMultiplier: 3.0,   // drive accel multiplier while boosting
@@ -137,6 +155,21 @@ export const CONFIG = {
     edgeInset: 1.4,         // spawn this far inside the wall
     clearance: 1.3,         // half-size of the box that must be empty to spawn
   },
+
+  // AI vehicle types. Values override CONFIG.ai for that type. `counts` is how
+  // much each body counts toward match size and level goals.
+  vehicles: {
+    car: { length: 1.8, width: 1.0, counts: 1 },
+    motorcycle: { length: 1.25, width: 0.55, counts: 1, density: 0.7, speed: 3.4, accel: 9, turnRate: 2.6, lateralGrip: 0.2 },
+    bus: { length: 3.6, width: 1.2, counts: 2, density: 1.5, speed: 1.6, accel: 4, turnRate: 1.0 },
+    // Semi: a cab plus a trailer on a hinge; each body counts 1 (2 total).
+    semi: { length: 1.7, width: 1.15, counts: 1, density: 1.3, speed: 1.8, accel: 5, turnRate: 1.2,
+      trailer: { length: 3.4, width: 1.15, density: 1.1, lateralGrip: 0.3 }, hingeLimit: 1.3 },
+    // Police chase the player when within chaseRange.
+    police: { length: 1.9, width: 1.0, counts: 1, density: 1.3, speed: 3.6, accel: 9, turnRate: 2.4, chaseRange: 12 },
+  },
+  vehicleMix: { car: 55, motorcycle: 14, bus: 11, semi: 10, police: 10 }, // spawn weights
+  convoy: { types: 3, mult: 1.5 },  // match with 3+ vehicle types: points x1.5
 
   // Car colors, in the order they're introduced.
   colors: ['#ff4d5e', '#3fa9ff', '#ffd23f', '#4ade80', '#a970ff', '#ff8a3d'],
