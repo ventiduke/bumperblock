@@ -79,7 +79,12 @@ export function createHUD() {
           el.healthFill.style.width = `${pct}%`;
           el.healthFill.className = frac < 0.25 ? 'low' : frac < 0.5 ? 'mid' : '';
         }
-        if (changed('repair', game.repairColor)) el.repair.style.background = CONFIG.colors[game.repairColor];
+        if (changed('repair', game.repairColor)) {
+          const none = game.repairColor < 0;
+          el.repair.classList.toggle('none', none);
+          el.repair.style.background = none ? '' : CONFIG.colors[game.repairColor];
+          el.repair.title = none ? 'No repair color right now' : 'Repair color: explode these to heal';
+        }
         el.health.classList.toggle('hurt', game.hurtFlash > 0.15);
       }
 

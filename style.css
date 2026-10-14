@@ -123,6 +123,8 @@ button {
 }
 #repair .cross { position: relative; }
 #repair .cross::after { position: absolute; left: 0; top: 0; transform: rotate(90deg); }
+#repair.none { background: #3a3f4d; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+#repair.none .cross { opacity: 0.25; }
 #health-bar {
   width: 110px;
   height: 12px;
@@ -146,12 +148,13 @@ button {
   line-height: 1;
 }
 
+/* Mid-height on the right edge, away from where thumbs rest to steer. */
 #boost {
   position: fixed;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  width: 84px;
-  height: 84px;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  top: calc(50% - 38px);
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   border: none;
   padding: 6px;

@@ -271,7 +271,7 @@ function drawMinimap(ctx, r, game, view, margin) {
   const dot = 1.3;
   for (const car of game.cars) {
     const p = car.body.getPosition();
-    ctx.fillStyle = CONFIG.colors[car.color];
+    ctx.fillStyle = car.junk ? '#5d6270' : CONFIG.colors[car.color];
     ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
   }
   if (game.player) {
@@ -321,6 +321,10 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
     tint = 0.14 + 0.12 * Math.sin(now * 5); // slow "breathing": bump me to set it off
   }
   place(ctx, car.body);
+  if (car.junk) {
+    drawJunk(ctx, L, CW);
+    return;
+  }
   // Tagged by the player: orange outline that fades as the tag runs out.
   if (car.tag > 0 && CONFIG.match.mode === 'tagged') {
     ctx.strokeStyle = `rgba(255,159,28,${0.25 + 0.75 * Math.min(1, car.tag / CONFIG.match.tagTime)})`;
@@ -329,6 +333,21 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
     ctx.stroke();
   }
   carBody(ctx, L, CW, CONFIG.colors[car.color], 'rgba(15,18,26,0.55)');
+  // Rusting in a pile-up: browns over, and the outline blinks near the end.
+  if (car.rust > 0) {
+    const r = Math.min(1, car.rust / car.rustAt);
+    ctx.globalAlpha = 0.65 * r;
+    ctx.fillStyle = '#7a5a40';
+    roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (r > 0.5 && Math.sin(now * 14) > 0) {
+      ctx.strokeStyle = '#ff9f1c';
+      ctx.lineWidth = 0.1;
+      roundRect(ctx, -L / 2 - 0.06, -CW / 2 - 0.06, L + 0.12, CW + 0.12, 0.26);
+      ctx.stroke();
+    }
+  }
   if (tint > 0) {
     ctx.globalAlpha = tint;
     ctx.fillStyle = '#ffffff';
@@ -341,11 +360,28 @@ function drawCar(ctx, car, L, CW, now, repairColor) {
     ctx.fillRect(-L * 0.4, -CW * 0.36, L * 0.28, CW * 0.72);
   }
   // Repair color: white cross on the roof.
-  if (car.color === repairColor) {
+  if (repairColor >= 0 && car.color === repairColor) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(-L * 0.28, -0.07, 0.5, 0.14);
     ctx.fillRect(-L * 0.28 + 0.18, -0.25, 0.14, 0.5);
   }
+}
+
+function drawJunk(ctx, L, CW) {
+  carBody(ctx, L, CW, '#5d6270', 'rgba(15,18,26,0.6)');
+  ctx.fillStyle = '#7a5a40';
+  ctx.beginPath();
+  ctx.arc(-L * 0.2, CW * 0.15, 0.16, 0, Math.PI * 2);
+  ctx.arc(L * 0.3, -CW * 0.2, 0.12, 0, Math.PI * 2);
+  ctx.arc(-L * 0.38, -CW * 0.25, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(20,22,28,0.7)';
+  ctx.lineWidth = 0.06;
+  ctx.beginPath();
+  ctx.moveTo(-L * 0.45, CW * 0.35);
+  ctx.lineTo(-L * 0.1, -CW * 0.1);
+  ctx.lineTo(L * 0.05, CW * 0.3);
+  ctx.stroke();
 }
 
 function drawPlayer(ctx, pc, L, CW, game) {

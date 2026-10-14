@@ -12,6 +12,7 @@ import { createInput } from './input.js';
 import { createHUD } from './hud.js';
 import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
 import { initDamage, impactDamage, updateDamage, repairFrom } from './damage.js';
+import { updatePileups, clearJunkNear } from './pileup.js';
 
 const pl = window.planck;
 const params = new URLSearchParams(location.search);
@@ -53,7 +54,7 @@ function newGame(levelIndex = 0, startScore = 0) {
     camera: { x: 0, y: 0 },
   };
   initDamage(g);
-  g.onRepairChange = (c) => hud.announce('Repair color', CONFIG.colors[c]);
+  g.onRepairChange = (c) => (c >= 0 ? hud.announce('Repair color', CONFIG.colors[c]) : hud.announce('No repairs for now'));
   createTerrain(world);
   g.player = createPlayer(world);
   world.on('pre-solve', (contact) => recordApproach(contact));
@@ -150,6 +151,9 @@ function explode(g, group) {
   cx /= group.length;
   cy /= group.length;
 
+  // Blasts clear rusted junk next to the exploding cars (the clean-up save).
+  const junk = CONFIG.features.pileups ? clearJunkNear(g, group) : 0;
+
   for (const car of group) {
     const p = car.body.getPosition();
     const col = CONFIG.colors[car.color];
@@ -167,9 +171,10 @@ function explode(g, group) {
 
   g.combo = g.comboTimer > 0 ? g.combo + 1 : 1;
   g.comboTimer = M.comboWindow;
-  const pts = scoreFor(group.length, g.combo);
+  const pts = scoreFor(group.length, g.combo) + junk * CONFIG.pileup.pointsPerJunk;
   g.score += pts;
   floatText(g.fx, cx, cy, g.combo > 1 ? `+${pts} x${g.combo}` : `+${pts}`);
+  if (junk) floatText(g.fx, cx, cy + 1, `${junk} junk cleared`, '#c9ced8');
   addShake(g.fx, 0.12 + 0.03 * group.length);
 
   // Shockwave: shove and stun everything nearby.
@@ -223,8 +228,10 @@ function step(g, dt) {
   g.elapsed += dt;
 
   g.matchInfo = updateMatches(g, dt);
+  const links = g.matchInfo.links;
   for (const group of g.matchInfo.ready) explode(g, group);
   if (g.matchInfo.ready.length) g.matchInfo = emptyMatchInfo();
+  g.pileups = CONFIG.features.pileups ? updatePileups(g, links, dt) : 0;
 
   if (CONFIG.features.levels && goalMet(g.level, g.cleared)) {
     completeLevel(g);
@@ -324,9 +331,9 @@ function frame(now) {
     const pv = game.player.body.getLinearVelocity().length();
     debugEl.textContent =
       `fps ${fps.toFixed(0)}\n` +
-      `cars ${game.cars.length}  armed ${game.matchInfo.groups.length}  primed ${game.matchInfo.primed.length}\n` +
+      `cars ${game.cars.length}  armed ${game.matchInfo.groups.length}  primed ${game.matchInfo.primed.length}  piles ${game.pileups}  junk ${game.cars.filter((c) => c.junk).length}\n` +
       `level ${game.levelIndex + 1}  spawn every ${spawnInterval(game.elapsed, game.level.spawn).toFixed(2)}s  t=${game.elapsed.toFixed(0)}s\n` +
-      `health ${game.health.toFixed(1)}${game.squeezed ? ' SQUEEZED' : ''}  repair c${game.repairColor} in ${game.repairTimer.toFixed(0)}s\n` +
+      `health ${game.health.toFixed(1)}${game.squeezed ? ' SQUEEZED' : ''}  repair ${game.repairColor >= 0 ? 'c' + game.repairColor : 'none'} for ${game.repairTimer.toFixed(0)}s\n` +
       `speed ${pv.toFixed(2)}  stuck ${game.player.stuckTimer.toFixed(2)}\n` +
       `boost ${game.player.boostCharge.toFixed(2)}`;
   }

@@ -6,6 +6,7 @@ export const CONFIG = {
   features: {
     levels: true,           // level goals + results screen (off: endless, colorSchedule)
     damage: true,           // health, impact/squeeze damage, repair color
+    pileups: true,          // big clumps of cars rust into junk
   },
 
   // Each level: colors in play, the goal, spawn pace, and a par time (s) for
@@ -36,9 +37,12 @@ export const CONFIG = {
     squeezeSpeed: 1.5,
     squeezePerSec: 6,
     drainPerSec: 0.7,       // constant wear: ~140 s from full without repairs
-    // Repair: exploding the repair color heals; it rotates among active colors.
+    // Repair: exploding the repair color heals. Repair windows come and go:
+    // a color is the repair color for repairOnTime, then there's no repair
+    // color for repairOffTime, then a new one is picked.
     healPerCar: 8,
-    repairRotate: 25,       // seconds between repair color changes
+    repairOnTime: 18,
+    repairOffTime: 12,
   },
   // Landscape arena, bigger than the screen; the camera follows the player.
   // Coordinates: x right, y down, origin top-left.
@@ -84,6 +88,12 @@ export const CONFIG = {
     brakeDecel: 28,         // m/s^2 when braking (both sides held, or S / Down)
     reverseAccel: 9,        // m/s^2 once stopped and still braking
     reverseSpeed: 3.5,      // max reverse speed (m/s)
+  },
+
+  input: {
+    swipeBoost: true,       // a quick upward swipe on either side also boosts
+    swipePx: 45,
+    swipeMs: 350,
   },
 
   boost: {
@@ -184,6 +194,21 @@ export const CONFIG = {
       ice: { grip: 0.08, damping: 0.15, accel: 0.55, speed: 1.0 },
       mud: { grip: 1.0, damping: 2.5, accel: 0.6, speed: 0.45 },
     },
+  },
+
+  // Pile-ups: a connected clump of at least `size` touching AI cars (any
+  // colors) that holds together starts rusting. Each car rusts into junk after
+  // rustTime (+/- rustJitter) seconds in a pile-up: grey, heavy, unmatchable.
+  // An explosion destroys junk within clearRadius of the exploding cars.
+  pileup: {
+    size: 7,
+    rustTime: 6,
+    rustJitter: 1.5,
+    recover: 2,             // rust timer drains this many times faster outside a pile-up
+    junkDensity: 3,         // x AI density
+    junkDamping: 4,
+    clearRadius: 2.6,
+    pointsPerJunk: 5,
   },
 
   stuck: {
