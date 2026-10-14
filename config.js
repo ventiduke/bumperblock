@@ -2,9 +2,10 @@
 // Tweak here; nothing else needs to change.
 
 export const CONFIG = {
+  // Landscape arena. Coordinates: x right, y down, origin top-left.
   arena: {
-    width: 14,
-    height: 25,
+    width: 25,
+    height: 14,
     wallThickness: 1,
   },
 
@@ -25,7 +26,7 @@ export const CONFIG = {
 
   player: {
     density: 3.0,           // relative to AI density; heavier = shoves harder
-    topSpeed: 8.5,          // m/s
+    topSpeed: 7,            // m/s
     accel: 22,              // m/s^2 drive acceleration below top speed
     turnRate: 3.6,          // rad/s at full steer
     steerResponse: 45,      // how fast angular velocity reaches target (1/s); high = crisp, and lets you pivot out of pins
@@ -34,6 +35,9 @@ export const CONFIG = {
     lateralGrip: 1.0,       // max sideways-cancel impulse per step, as fraction of mass*m/s
     linearDamping: 0.3,
     angularDamping: 4,
+    brakeDecel: 28,         // m/s^2 when braking (both sides held, or S / Down)
+    reverseAccel: 9,        // m/s^2 once stopped and still braking
+    reverseSpeed: 3.5,      // max reverse speed (m/s)
   },
 
   boost: {
@@ -77,6 +81,16 @@ export const CONFIG = {
   colors: ['#ff4d5e', '#3fa9ff', '#ffd23f', '#4ade80'],
 
   match: {
+    // Who can set off a match:
+    //  'tagged' - a group explodes only if one of its cars was recently hit by
+    //             the player (or by a car the player knocked, or a blast).
+    //             Untagged groups sit "primed" until you bump them.
+    //  'touch'  - the player must be touching the group.
+    //  'any'    - any group explodes on its own (original Phase 1 behavior).
+    mode: 'tagged',
+    tagTime: 4.0,           // seconds a car stays tagged after the player hits it
+    tagCarry: 0.75,         // fraction of tag passed on when a tagged car hits another
+    carryImpulse: 5,        // min impulse (N*s) for a tag to pass on; above AI cruising bumps
     minGroup: 3,
     delay: 0.3,             // seconds a group must hold before exploding
     contactMargin: 0.14,    // sensor padding (m): how close counts as "touching"
@@ -84,6 +98,26 @@ export const CONFIG = {
     comboWindow: 1.5,       // seconds; explosions within this chain a combo
     blastRadius: 4.0,
     blastImpulse: 9,        // m/s velocity change at blast center (scaled by mass)
+  },
+
+  // Terrain. Rects are centered at (x, y) with size w x h, in meters.
+  terrain: {
+    blocks: [
+      // Two stubs off the top and bottom walls leave a 7 m gap in the middle
+      // (no thin slivers for cars to jam in).
+      { x: 12.5, y: 1.75, w: 1.0, h: 3.5 },
+      { x: 12.5, y: 12.25, w: 1.0, h: 3.5 },
+      { x: 6.5, y: 4.0, w: 1.6, h: 1.6 },
+    ],
+    zones: [
+      { type: 'ice', x: 19.0, y: 4.2, w: 6.5, h: 4.5 },
+      { type: 'mud', x: 6.5, y: 10.5, w: 5.5, h: 4.0 },
+    ],
+    // Multipliers applied to a car whose center is inside the zone.
+    types: {
+      ice: { grip: 0.08, damping: 0.15, accel: 0.55, speed: 1.0 },
+      mud: { grip: 1.0, damping: 2.5, accel: 0.6, speed: 0.45 },
+    },
   },
 
   stuck: {
@@ -103,7 +137,8 @@ export const CONFIG = {
 
   render: {
     maxDpr: 2,              // cap device pixel ratio for fill-rate on phones
-    hudTopPx: 52,           // reserved space for the top HUD bar
+    hudTopPx: 52,           // reserved space for the top HUD bar (when no side room)
+    sideHudPx: 84,          // if side margins are at least this wide, HUD moves into them
     boostReservePx: 104,    // space kept under the arena for the boost button, if it fits
   },
 };
