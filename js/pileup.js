@@ -60,7 +60,7 @@ function makeJunk(game, car) {
   car.matchTimer = 0;
   car.groupId = -1;
   for (let f = car.body.getFixtureList(); f; f = f.getNext()) {
-    if (!f.isSensor()) f.setDensity(CONFIG.ai.density * P.junkDensity);
+    if (!f.isSensor()) f.setDensity((car.spec?.density ?? CONFIG.ai.density) * P.junkDensity);
   }
   car.body.resetMassData();
   const p = car.body.getPosition();
