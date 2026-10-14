@@ -3,6 +3,7 @@
 // shoved car stays roughly where you put it.
 import { CONFIG } from '../config.js';
 import { createCar, applyGrip, applyDrive } from './physics.js';
+import { surfaceAt, obstacleAhead } from './terrain.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -12,6 +13,9 @@ export function createAI(world, x, y, angle, color) {
   car.wanderTimer = rand(CONFIG.ai.wanderMinTime, CONFIG.ai.wanderMaxTime);
   car.entering = 1.0; // seconds of driving straight in after spawning
   car.wallBias = rand(-0.5, 0.5);
+  car.tag = 0;          // >0 while the player's influence can set off a match
+  car.lookTimer = rand(0, 0.25);
+  car.bounce = 0;
   return car;
 }
 
@@ -26,27 +30,50 @@ function wrapAngle(a) {
   return a - t * Math.floor((a + Math.PI) / t);
 }
 
-export function updateAI(car, dt) {
+// Ray-check for blocks ahead a few times a second (not every step).
+// Returns the obstacle's surface normal, or null.
+function blockedAhead(car, world, dt) {
+  car.lookTimer -= dt;
+  if (car.lookTimer > 0) return null;
+  car.lookTimer = 0.25;
+  return obstacleAhead(world, car.body, 2.2);
+}
+
+export function updateAI(car, dt, world) {
   const A = CONFIG.ai;
   const body = car.body;
-  applyGrip(body, A.lateralGrip);
+  if (car.tag > 0) car.tag = Math.max(0, car.tag - dt);
+  const pos = body.getPosition();
+  const surf = surfaceAt(pos.x, pos.y);
+  applyGrip(body, A.lateralGrip * surf.grip);
 
   if (car.stun > 0) {
     car.stun -= dt;
-    if (car.stun <= 0) {
-      body.setLinearDamping(A.linearDamping);
-      car.heading = body.getAngle();
-    }
-    return;
+    if (car.stun <= 0) car.heading = body.getAngle();
+    body.setLinearDamping((car.stun > 0 ? A.stunDamping : A.linearDamping) * surf.damping);
+    if (car.stun > 0) return;
+  } else {
+    body.setLinearDamping(A.linearDamping * surf.damping);
   }
 
-  const p = body.getPosition();
+  const p = pos;
   const { width: W, height: H } = CONFIG.arena;
+  let n;
   if (car.entering > 0) {
     car.entering -= dt;
+  } else if (car.bounce > 0) {
+    car.bounce -= dt; // hold the bounce heading so wall-avoid doesn't steer us back in
   } else {
     const d = A.wallAvoidDist;
-    if (p.x < d || p.x > W - d || p.y < d || p.y > H - d) {
+    if ((n = blockedAhead(car, world, dt))) {
+      // Bounce the heading off the obstacle's surface, plus a little jitter.
+      const a = body.getAngle();
+      const dx = Math.cos(a), dy = Math.sin(a);
+      const dn = dx * n.x + dy * n.y;
+      car.heading = Math.atan2(dy - 2 * dn * n.y, dx - 2 * dn * n.x) + rand(-0.3, 0.3);
+      car.bounce = 0.8;
+      car.wanderTimer = rand(A.wanderMinTime, A.wanderMaxTime);
+    } else if (p.x < d || p.x > W - d || p.y < d || p.y > H - d) {
       car.heading = Math.atan2(H / 2 - p.y, W / 2 - p.x) + car.wallBias;
       car.wanderTimer = rand(A.wanderMinTime, A.wanderMaxTime);
     } else if ((car.wanderTimer -= dt) <= 0) {
@@ -58,5 +85,5 @@ export function updateAI(car, dt) {
   const diff = wrapAngle(car.heading - body.getAngle());
   const w = Math.max(-A.turnRate, Math.min(A.turnRate, diff * 3));
   body.setAngularVelocity(w);
-  applyDrive(body, A.accel, A.speed);
+  applyDrive(body, A.accel * surf.accel, A.speed * surf.speed);
 }
