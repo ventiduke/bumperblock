@@ -11,22 +11,109 @@ export function createRenderer(canvas) {
     canvas.width = Math.round(r.w * r.dpr);
     canvas.height = Math.round(r.h * r.dpr);
     const { width: W, height: H } = CONFIG.arena;
+    const R = CONFIG.render;
     const pad = 0.35; // visible wall rim in meters
-    const top = CONFIG.render.hudTopPx;
-    const availW = r.w - 12;
-    const availH = r.h - top - 8;
-    r.scale = Math.min(availW / (W + 2 * pad), availH / (H + 2 * pad));
-    r.ox = (r.w - W * r.scale) / 2;
-    // Spare vertical space goes below the arena first, so the boost button
-    // doesn't cover a corner; anything beyond that is split evenly.
-    const spare = availH - H * r.scale;
-    const below = Math.min(spare, CONFIG.render.boostReservePx);
-    r.oy = top + (spare - below) / 2;
+    const inset = safeInsets();
+    const w = r.w - inset.left - inset.right;
+    const h = r.h - inset.top - inset.bottom;
+    const fit = (top) => Math.min((w - 12) / (W + 2 * pad), (h - top - 8) / (H + 2 * pad));
+
+    // Prefer putting the HUD in the side margins (landscape); fall back to a
+    // top bar when the margins are too thin.
+    let top = 0;
+    r.scale = fit(0);
+    r.hudSide = (w - W * r.scale) / 2 >= R.sideHudPx;
+    if (!r.hudSide) {
+      top = R.hudTopPx;
+      r.scale = fit(top);
+    }
+    r.ox = inset.left + (w - W * r.scale) / 2;
+    // In top-bar mode, spare vertical space goes below the arena first so the
+    // boost button doesn't cover a corner.
+    const spare = h - top - 8 - H * r.scale;
+    const below = r.hudSide ? 0 : Math.min(spare, R.boostReservePx);
+    r.oy = inset.top + top + (spare - below) / 2;
+
+    document.body.classList.toggle('hud-side', r.hudSide);
+    document.documentElement.style.setProperty('--side', `${Math.max(0, r.ox - inset.left)}px`);
   };
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
   resize();
   return r;
+}
+
+// Reads env(safe-area-inset-*) (notches) via a probe element.
+let probe = null;
+function safeInsets() {
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;' +
+      'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(probe);
+  }
+  const cs = getComputedStyle(probe);
+  return {
+    top: parseFloat(cs.paddingTop) || 0,
+    right: parseFloat(cs.paddingRight) || 0,
+    bottom: parseFloat(cs.paddingBottom) || 0,
+    left: parseFloat(cs.paddingLeft) || 0,
+  };
+}
+
+function drawTerrain(ctx) {
+  const T = CONFIG.terrain;
+  for (const z of T.zones) {
+    const x = z.x - z.w / 2, y = z.y - z.h / 2;
+    if (z.type === 'ice') {
+      ctx.fillStyle = 'rgba(150, 215, 255, 0.16)';
+      roundRect(ctx, x, y, z.w, z.h, 0.6);
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(210, 240, 255, 0.18)';
+      ctx.lineWidth = 0.12;
+      ctx.beginPath();
+      for (let d = -z.h; d < z.w; d += 1.1) {
+        ctx.moveTo(x + d, y + z.h);
+        ctx.lineTo(x + d + z.h, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(170, 225, 255, 0.45)';
+    } else if (z.type === 'mud') {
+      ctx.fillStyle = 'rgba(120, 82, 44, 0.55)';
+      roundRect(ctx, x, y, z.w, z.h, 0.9);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(70, 46, 22, 0.55)';
+      // Deterministic speckles so they don't flicker.
+      for (let i = 0; i < 40; i++) {
+        const px = x + 0.4 + ((i * 7.31) % (z.w - 0.8));
+        const py = y + 0.4 + ((i * 3.77) % (z.h - 0.8));
+        ctx.beginPath();
+        ctx.arc(px, py, 0.12 + (i % 3) * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(150, 105, 60, 0.6)';
+    } else {
+      continue;
+    }
+    ctx.lineWidth = 0.06;
+    roundRect(ctx, x, y, z.w, z.h, z.type === 'mud' ? 0.9 : 0.6);
+    ctx.stroke();
+  }
+  for (const b of T.blocks) {
+    const x = b.x - b.w / 2, y = b.y - b.h / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(ctx, x + 0.1, y + 0.14, b.w, b.h, 0.15);
+    ctx.fill();
+    ctx.fillStyle = '#3d4352';
+    roundRect(ctx, x, y, b.w, b.h, 0.15);
+    ctx.fill();
+    ctx.fillStyle = '#4b5263';
+    roundRect(ctx, x + 0.1, y + 0.1, b.w - 0.2, b.h - 0.2, 0.1);
+    ctx.fill();
+  }
 }
 
 function roundRect(ctx, x, y, w, h, rad) {
@@ -65,8 +152,24 @@ export function render(r, game, debug) {
   for (let y = 2; y < H; y += 2) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
   ctx.stroke();
 
-  // Links within pending groups.
+  drawTerrain(ctx);
+
+  // Primed groups (matched but waiting for the player): faint dashed links.
   ctx.lineCap = 'round';
+  ctx.setLineDash([0.25, 0.3]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 0.14;
+  ctx.beginPath();
+  for (const [a, b, same] of game.matchInfo.links) {
+    if (!same || !a.primed) continue;
+    const pa = a.body.getPosition(), pb = b.body.getPosition();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Links within counting-down groups.
   for (const [a, b, same] of game.matchInfo.links) {
     if (!same || a.groupId < 0) continue;
     const pa = a.body.getPosition(), pb = b.body.getPosition();
@@ -138,8 +241,17 @@ function drawCar(ctx, car, L, CW, now) {
     tint = 0.25 + 0.55 * t * (0.6 + 0.4 * Math.sin(now * 40));
   } else if (car.flash > 0) {
     tint = car.flash * 0.8;
+  } else if (car.primed) {
+    tint = 0.14 + 0.12 * Math.sin(now * 5); // slow "breathing": bump me to set it off
   }
   place(ctx, car.body);
+  // Tagged by the player: orange outline that fades as the tag runs out.
+  if (car.tag > 0 && CONFIG.match.mode === 'tagged') {
+    ctx.strokeStyle = `rgba(255,159,28,${0.25 + 0.75 * Math.min(1, car.tag / CONFIG.match.tagTime)})`;
+    ctx.lineWidth = 0.14;
+    roundRect(ctx, -L / 2 - 0.1, -CW / 2 - 0.1, L + 0.2, CW + 0.2, 0.3);
+    ctx.stroke();
+  }
   carBody(ctx, L, CW, CONFIG.colors[car.color], 'rgba(15,18,26,0.55)');
   if (tint > 0) {
     ctx.globalAlpha = tint;
@@ -177,6 +289,11 @@ function drawPlayer(ctx, pc, L, CW) {
     ctx.fill();
   }
   carBody(ctx, L, CW, '#f4f5f7', 'rgba(15,18,26,0.75)');
+  if (pc.reversing) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-L / 2 - 0.08, -CW * 0.42, 0.12, 0.22);
+    ctx.fillRect(-L / 2 - 0.08, CW * 0.2, 0.12, 0.22);
+  }
   ctx.fillStyle = '#ff9f1c';
   ctx.fillRect(-L / 2, -0.12, L * 0.58, 0.24);
   ctx.fillRect(L * 0.3, -0.12, L * 0.2, 0.24);

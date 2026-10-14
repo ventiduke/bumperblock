@@ -1,6 +1,7 @@
 // Bootstrap, fixed-timestep loop, game state, explosions, restart.
 import { CONFIG } from '../config.js';
 import { createWorld, areaClear } from './physics.js';
+import { createTerrain } from './terrain.js';
 import { createPlayer, updatePlayer, updateStuck, tryBoost } from './player.js';
 import { createAI, updateAI, stunAI } from './ai.js';
 import { createSpawner, updateSpawner, spawnInterval } from './spawner.js';
@@ -34,8 +35,9 @@ function newGame() {
     comboTimer: 0,
     elapsed: 0,
     over: false,
-    matchInfo: { links: [], groups: [], ready: [] },
+    matchInfo: { links: [], groups: [], primed: [], ready: [] },
   };
+  createTerrain(world);
   g.player = createPlayer(world);
   world.on('post-solve', (contact, impulse) => onImpact(g, contact, impulse));
 
@@ -59,12 +61,27 @@ function onImpact(g, contact, impulse) {
   const n = contact.getManifold().pointCount;
   let maxImp = 0;
   for (let i = 0; i < n; i++) maxImp = Math.max(maxImp, imps[i]);
-  if (maxImp < CONFIG.ai.stunImpulse) return;
 
   const A = ua && ua.kind !== 'wall' ? ua : null;
   const B = ub && ub.kind !== 'wall' ? ub : null;
-  // Hard hits stun AI so they settle where they land (optionally AI-AI/wall hits too).
   const playerInvolved = (A && A.kind === 'player') || (B && B.kind === 'player');
+
+  // Tagging: any touch from the player tags the car; a hard hit from a
+  // tagged car (one the player launched) passes part of its tag on, so
+  // knock-on shots count but ordinary AI bumps don't spread it.
+  const M = CONFIG.match;
+  if (A && B) {
+    if (playerInvolved) {
+      const other = A.kind === 'player' ? B : A;
+      other.tag = M.tagTime;
+    } else if (maxImp >= M.carryImpulse) {
+      if (A.tag > 0) B.tag = Math.max(B.tag, A.tag * M.tagCarry);
+      if (B.tag > 0) A.tag = Math.max(A.tag, B.tag * M.tagCarry);
+    }
+  }
+  if (maxImp < CONFIG.ai.stunImpulse) return;
+
+  // Hard hits stun AI so they settle where they land (optionally AI-AI/wall hits too).
   if (playerInvolved || CONFIG.ai.stunFromAI) {
     if (A) stunAI(A);
     if (B) stunAI(B);
@@ -122,6 +139,7 @@ function explode(g, group) {
     const k = M.blastImpulse * (1 - d / M.blastRadius) * b.getMass() / d;
     b.applyLinearImpulse(pl.Vec2(dx * k, dy * k), b.getWorldCenter(), true);
     stunAI(car);
+    if (car.kind === 'ai') car.tag = M.tagTime; // blasts can chain
   };
   for (const car of g.cars) shove(car);
   shove(g.player);
@@ -134,9 +152,9 @@ function step(g, dt) {
   }
   const p = g.player;
   if (input.consumeBoost()) tryBoost(p);
-  updatePlayer(p, dt, input.steer());
+  updatePlayer(p, dt, input.steer(), input.brake());
   for (const car of g.cars) {
-    updateAI(car, dt);
+    updateAI(car, dt, g.world);
     if (car.flash > 0) car.flash = Math.max(0, car.flash - dt * 4);
   }
 
@@ -146,7 +164,7 @@ function step(g, dt) {
 
   g.matchInfo = updateMatches(g, dt);
   for (const group of g.matchInfo.ready) explode(g, group);
-  if (g.matchInfo.ready.length) g.matchInfo = { links: [], groups: [], ready: [] };
+  if (g.matchInfo.ready.length) g.matchInfo = { links: [], groups: [], primed: [], ready: [] };
 
   updateSpawner(g.spawner, g, dt);
 
@@ -180,6 +198,20 @@ window.addEventListener('keydown', (e) => {
 
 // Fixed-timestep loop.
 const DT = 1 / CONFIG.physics.stepHz;
+// Mirrors the CSS rule that shows the "rotate your phone" overlay.
+const rotatePrompt = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+
+// On phones that allow it (Android Chrome), go full screen and lock to
+// landscape on the first touch. iOS ignores this; the overlay covers it.
+document.addEventListener('pointerdown', function lockLandscape(e) {
+  if (e.pointerType !== 'touch') return;
+  document.removeEventListener('pointerdown', lockLandscape);
+  const el = document.documentElement;
+  if (!el.requestFullscreen) return;
+  el.requestFullscreen({ navigationUI: 'hide' })
+    .then(() => screen.orientation?.lock?.('landscape'))
+    .catch(() => {});
+});
 let accumulator = 0;
 let lastTime = performance.now();
 let fps = 60;
@@ -193,6 +225,7 @@ function frame(now) {
   if (elapsed > 0.25) elapsed = 0.25;
   if (elapsed > 0) fps += (1 / elapsed - fps) * 0.05;
 
+  if (rotatePrompt.matches) elapsed = 0; // paused behind the "rotate" overlay
   accumulator += elapsed;
   let steps = 0;
   while (accumulator >= DT && steps < CONFIG.physics.maxSubSteps) {
@@ -210,7 +243,7 @@ function frame(now) {
     const pv = game.player.body.getLinearVelocity().length();
     debugEl.textContent =
       `fps ${fps.toFixed(0)}\n` +
-      `cars ${game.cars.length}  groups ${game.matchInfo.groups.length}\n` +
+      `cars ${game.cars.length}  armed ${game.matchInfo.groups.length}  primed ${game.matchInfo.primed.length}\n` +
       `spawn every ${spawnInterval(game.elapsed).toFixed(2)}s  t=${game.elapsed.toFixed(0)}s\n` +
       `speed ${pv.toFixed(2)}  stuck ${game.player.stuckTimer.toFixed(2)}\n` +
       `boost ${game.player.boostCharge.toFixed(2)}`;
@@ -228,6 +261,7 @@ window.bumper = {
   CONFIG,
   restart,
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },
+  areaClear: (x, y, half) => areaClear(game.world, x, y, half),
   spawnAt(color, x, y, angle = 0) {
     const car = createAI(game.world, x, y, angle, color);
     game.cars.push(car);
