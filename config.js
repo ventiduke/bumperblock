@@ -2,11 +2,19 @@
 // Tweak here; nothing else needs to change.
 
 export const CONFIG = {
-  // Landscape arena. Coordinates: x right, y down, origin top-left.
+  // Landscape arena, bigger than the screen; the camera follows the player.
+  // Coordinates: x right, y down, origin top-left.
   arena: {
-    width: 25,
-    height: 14,
+    width: 40,
+    height: 24,
     wallThickness: 1,
+  },
+
+  camera: {
+    viewHeight: 14,         // meters of arena visible vertically (zoom)
+    minViewWidth: 20,       // on narrow screens, zoom out to show at least this much width
+    lookAhead: 0.35,        // seconds of velocity to lead the camera by
+    follow: 5,              // how quickly the camera catches up (1/s)
   },
 
   physics: {
@@ -65,29 +73,46 @@ export const CONFIG = {
     stunImpulse: 1.2,       // normal impulse (N*s) that counts as a hard hit
     stunDamping: 3.5,       // linear damping while stunned
     stunFromAI: true,       // AI-AI and AI-wall hits also stun (more natural clumping)
+    // Pressure: chance that a wander decision heads toward the player instead,
+    // ramping from seekStart to seekMax over spawn.rampTime. The crowd drifts
+    // your way as the level goes on, which is what makes boxing-in possible.
+    seekStart: 0.0,
+    seekMax: 0.35,
   },
 
   spawn: {
-    initialCars: 6,
-    startInterval: 2.2,     // seconds between spawns at t=0
-    minInterval: 0.6,       // fastest spawn interval
+    initialCars: 10,
+    startInterval: 1.6,     // seconds between spawns at t=0
+    minInterval: 0.45,      // fastest spawn interval
     rampTime: 120,          // seconds to go from start to min interval
-    maxCars: 40,
+    maxCars: 80,            // ~0.08 cars/m^2 in the 40x24 arena
     edgeInset: 1.4,         // spawn this far inside the wall
     clearance: 1.3,         // half-size of the box that must be empty to spawn
   },
 
-  // Index order matters only for display. Remove entries for fewer colors.
-  colors: ['#ff4d5e', '#3fa9ff', '#ffd23f', '#4ade80'],
+  // Car colors, in the order they're introduced.
+  colors: ['#ff4d5e', '#3fa9ff', '#ffd23f', '#4ade80', '#a970ff', '#ff8a3d'],
+  // How many of those colors are in play from time t (seconds). More colors
+  // means fewer same-color neighbors, so matches get harder.
+  colorSchedule: [
+    { t: 0, count: 3 },
+    { t: 45, count: 4 },
+    { t: 100, count: 5 },
+    { t: 170, count: 6 },
+  ],
 
   match: {
     // Who can set off a match:
+    //  'chain'  - the player must be part of the chain: touching the group, or
+    //             bridging same-color cars on either side (player is a wildcard
+    //             link but doesn't count toward minGroup). Pull away before
+    //             the delay ends and the countdown cancels.
     //  'tagged' - a group explodes only if one of its cars was recently hit by
     //             the player (or by a car the player knocked, or a blast).
-    //             Untagged groups sit "primed" until you bump them.
-    //  'touch'  - the player must be touching the group.
+    //  'touch'  - the player must have touched the group (countdown sticks).
     //  'any'    - any group explodes on its own (original Phase 1 behavior).
-    mode: 'tagged',
+    //  Groups that qualify but aren't set off show as "primed".
+    mode: 'chain',
     tagTime: 4.0,           // seconds a car stays tagged after the player hits it
     tagCarry: 0.75,         // fraction of tag passed on when a tagged car hits another
     carryImpulse: 5,        // min impulse (N*s) for a tag to pass on; above AI cruising bumps
@@ -101,17 +126,20 @@ export const CONFIG = {
   },
 
   // Terrain. Rects are centered at (x, y) with size w x h, in meters.
+  // Blocks either touch a wall or leave >= 3 m gaps, so cars don't jam in slivers.
   terrain: {
     blocks: [
-      // Two stubs off the top and bottom walls leave a 7 m gap in the middle
-      // (no thin slivers for cars to jam in).
-      { x: 12.5, y: 1.75, w: 1.0, h: 3.5 },
-      { x: 12.5, y: 12.25, w: 1.0, h: 3.5 },
-      { x: 6.5, y: 4.0, w: 1.6, h: 1.6 },
+      { x: 14, y: 3, w: 1, h: 6 },         // stub off the top wall
+      { x: 26, y: 21, w: 1, h: 6 },        // stub off the bottom wall
+      { x: 20, y: 12, w: 4, h: 2 },        // central island
+      { x: 7, y: 6, w: 1.6, h: 1.6 },
+      { x: 33, y: 18, w: 1.6, h: 1.6 },
     ],
     zones: [
-      { type: 'ice', x: 19.0, y: 4.2, w: 6.5, h: 4.5 },
-      { type: 'mud', x: 6.5, y: 10.5, w: 5.5, h: 4.0 },
+      { type: 'ice', x: 33, y: 7, w: 10, h: 7 },
+      { type: 'ice', x: 19, y: 20, w: 6, h: 3 },
+      { type: 'mud', x: 8, y: 18.5, w: 9, h: 6 },
+      { type: 'mud', x: 20, y: 5, w: 5, h: 3 },
     ],
     // Multipliers applied to a car whose center is inside the zone.
     types: {
@@ -137,8 +165,6 @@ export const CONFIG = {
 
   render: {
     maxDpr: 2,              // cap device pixel ratio for fill-rate on phones
-    hudTopPx: 52,           // reserved space for the top HUD bar (when no side room)
-    sideHudPx: 84,          // if side margins are at least this wide, HUD moves into them
-    boostReservePx: 104,    // space kept under the arena for the boost button, if it fits
+    minimapWidth: 132,      // px; 0 hides the minimap
   },
 };

@@ -54,12 +54,13 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0 calc(12px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px));
   pointer-events: none;
+  background: linear-gradient(rgba(20, 22, 28, 0.75), rgba(20, 22, 28, 0));
 }
 
 #score-box { min-width: 72px; }
-#score { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+#score { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 #combo { font-size: 12px; color: var(--accent); font-weight: 700; height: 14px; }
 
 #boost-bar {
@@ -158,30 +159,25 @@ button {
   pointer-events: none;
 }
 
-/* Landscape: HUD lives in the side margins beside the arena. */
-body.hud-side #hud {
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
-  left: env(safe-area-inset-left, 0px);
-  right: auto;
-  width: var(--side);
-  height: auto;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 6px;
-}
-body.hud-side #score-box { min-width: 0; text-align: center; }
-body.hud-side #score { font-size: 22px; }
-body.hud-side #boost-bar { display: none; } /* the boost button's ring is the meter */
-body.hud-side #restart {
+/* "New color!" announcement. */
+#toast {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
-  right: calc(env(safe-area-inset-right, 0px) + (var(--side) - 40px) / 2);
+  top: calc(env(safe-area-inset-top, 0px) + 60px);
+  left: 50%;
+  transform: translate(-50%, -8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 22, 28, 0.85);
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
 }
-body.hud-side #boost {
-  width: min(84px, calc(var(--side) - 12px));
-  height: min(84px, calc(var(--side) - 12px));
-  right: calc(env(safe-area-inset-right, 0px) + (var(--side) - min(84px, calc(var(--side) - 12px))) / 2);
-}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast .swatch { width: 18px; height: 18px; border-radius: 5px; }
 
 /* Phones held upright: ask to rotate (the game pauses meanwhile). */
 #rotate {
