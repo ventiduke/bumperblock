@@ -13,6 +13,7 @@ export function createHUD() {
     debug: $('debug-text'),
   };
   let last = { score: -1, combo: -1, boost: -1, ready: null };
+  let toastTimer = 0;
 
   return {
     el,
@@ -37,6 +38,13 @@ export function createHUD() {
         el.boostBtn.classList.toggle('disabled', !ready);
         last.ready = ready;
       }
+    },
+    announceColor(color) {
+      const t = document.getElementById('toast');
+      t.querySelector('.swatch').style.background = color;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
     },
     showGameOver(score) {
       el.finalScore.textContent = score;

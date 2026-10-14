@@ -11,6 +11,13 @@ export function spawnInterval(elapsed) {
   return S.startInterval + (S.minInterval - S.startInterval) * t;
 }
 
+// Number of colors in play at time t (from CONFIG.colorSchedule).
+export function colorCount(elapsed) {
+  let n = CONFIG.colors.length;
+  for (const step of CONFIG.colorSchedule) if (elapsed >= step.t) n = step.count;
+  return Math.min(n, CONFIG.colors.length);
+}
+
 export function createSpawner() {
   return { timer: 0 };
 }
@@ -31,7 +38,7 @@ function edgePoint() {
 
 // Try a few edge points; returns the new car or null if none were clear.
 export function trySpawn(game, avoid = null, avoidDist = 0) {
-  const n = CONFIG.colors.length;
+  const n = colorCount(game.elapsed);
   for (let i = 0; i < 6; i++) {
     const p = edgePoint();
     if (avoid && Math.hypot(p.x - avoid.x, p.y - avoid.y) < avoidDist) continue;
@@ -46,5 +53,6 @@ export function trySpawn(game, avoid = null, avoidDist = 0) {
 export function updateSpawner(sp, game, dt) {
   if (game.cars.length >= CONFIG.spawn.maxCars) return;
   sp.timer += dt;
-  if (sp.timer >= spawnInterval(game.elapsed) && trySpawn(game)) sp.timer = 0;
+  // Keep spawns out of the player's immediate surroundings (they appear on screen).
+  if (sp.timer >= spawnInterval(game.elapsed) && trySpawn(game, game.player.body.getPosition(), 6)) sp.timer = 0;
 }
