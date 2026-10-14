@@ -11,7 +11,7 @@ import { createRenderer, render, updateCamera } from './render.js';
 import { createInput } from './input.js';
 import { createHUD } from './hud.js';
 import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
-import { initDamage, impactDamage, updateDamage, repairFrom } from './damage.js';
+import { initDamage, impactDamage, updateDamage, repairFrom, copRam } from './damage.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
 import { initAbilities, useAbility, cycleAbility, selectAbility, updateAbilities } from './abilities.js';
 
@@ -58,6 +58,7 @@ function newGame(levelIndex = 0, startScore = 0) {
     camera: { x: 0, y: 0 },
   };
   initDamage(g);
+  g.onCopRam = (car) => copRam(g, car);
   g.onRepairChange = (c) => (c >= 0 ? hud.announce('Repair color', CONFIG.colors[c]) : hud.announce('No repairs for now'));
   createTerrain(world);
   g.player = createPlayer(world);
@@ -131,8 +132,11 @@ function onImpact(g, contact, impulse) {
 
   // Hard hits stun AI so they settle where they land (optionally AI-AI/wall hits too).
   if (playerInvolved || CONFIG.ai.stunFromAI) {
-    if (A) stunAI(A);
-    if (B) stunAI(B);
+    // Per-type threshold: police shrug off anything but a hard hit, so
+    // they keep pushing instead of stunning themselves on contact.
+    const hard = (X) => maxImp >= (X.spec?.stunImpulse ?? CONFIG.ai.stunImpulse);
+    if (A && hard(A)) stunAI(A);
+    if (B && hard(B)) stunAI(B);
   }
 
   if (A && A.kind === 'ai') A.flash = Math.min(1, maxImp / 10);

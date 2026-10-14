@@ -58,9 +58,10 @@ export function createAI(world, x, y, angle, color, type = 'car', spec = vehicle
   return car;
 }
 
-export function stunAI(car, time = CONFIG.ai.stunTime) {
+// Stop an AI car driving for a while (default: its type's stunTime).
+export function stunAI(car, time = car.spec?.stunTime ?? CONFIG.ai.stunTime) {
   if (car.kind !== 'ai') return;
-  if (car.stun <= 0) car.body.setLinearDamping(CONFIG.ai.stunDamping);
+  if (car.stun <= 0) car.body.setLinearDamping(car.spec?.stunDamping ?? CONFIG.ai.stunDamping);
   car.stun = Math.max(car.stun, time);
 }
 
@@ -76,6 +77,16 @@ function blockedAhead(car, world, dt) {
   if (car.lookTimer > 0) return null;
   car.lookTimer = 0.25;
   return obstacleAhead(world, car.body, 2.2);
+}
+
+// True if two bodies' solid fixtures are touching.
+function touching(a, b) {
+  for (let ce = a.getContactList(); ce; ce = ce.next) {
+    if (ce.other !== b || !ce.contact.isTouching()) continue;
+    if (ce.contact.getFixtureA().isSensor() || ce.contact.getFixtureB().isSensor()) continue;
+    return true;
+  }
+  return false;
 }
 
 // Chance a wander decision steers toward the player at time `elapsed`.
@@ -144,11 +155,27 @@ export function updateAI(car, dt, world, game) {
     }
   }
 
-  // Police head straight for a nearby player.
+  // Police ram: a hard periodic shove while touching the player (tire grip
+  // otherwise makes the player nearly impossible to push sideways).
+  if (car.type === 'police' && game) {
+    car.ramTimer = Math.max(0, (car.ramTimer || 0) - dt);
+    if (car.ramTimer <= 0 && touching(body, game.player.body)) {
+      const pb = game.player.body;
+      const a = body.getAngle();
+      const k = A.ramShove * pb.getMass();
+      pb.applyLinearImpulse(pl.Vec2(Math.cos(a) * k, Math.sin(a) * k), pb.getWorldCenter(), true);
+      car.ramTimer = A.ramCooldown;
+      game.onCopRam?.(car);
+    }
+  }
+
+  // Police run down a nearby player, aiming where they're headed.
   if (car.type === 'police' && game && car.entering <= 0 && car.bounce <= 0) {
     const pp = game.player.body.getPosition();
     if (Math.hypot(pp.x - p.x, pp.y - p.y) < A.chaseRange) {
-      car.heading = Math.atan2(pp.y - p.y, pp.x - p.x);
+      const pv = game.player.body.getLinearVelocity();
+      const tx = pp.x + pv.x * A.lead, ty = pp.y + pv.y * A.lead;
+      car.heading = Math.atan2(ty - p.y, tx - p.x);
     }
   }
 

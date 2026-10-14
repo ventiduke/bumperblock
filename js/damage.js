@@ -9,7 +9,7 @@ export function initDamage(g) {
   g.repairColor = Math.floor(Math.random() * g.colors);
   g.repairTimer = CONFIG.damage.repairOnTime;
   g.hurtFlash = 0;
-  g.damageBy = { wall: 0, boost: 0, hit: 0, squeeze: 0, drain: 0 }; // for tuning / debug
+  g.damageBy = { wall: 0, boost: 0, hit: 0, cop: 0, squeeze: 0, drain: 0 }; // for tuning / debug
 }
 
 function hurt(g, amount, source) {
@@ -46,6 +46,23 @@ export function impactDamage(g, impulse, isWall, approach) {
   floatText(g.fx, p.x, p.y - 1.2, `-${Math.round(dmg)}`, '#ff6b6b');
   burst(g.fx, p.x, p.y, '#c9ced8', Math.min(10, 2 + Math.round(dmg / 2)), 3, 0.5, 0.18);
   addShake(g.fx, Math.min(0.2, dmg * 0.01));
+}
+
+// A police ram: flat damage plus feedback.
+export function copRam(g, car) {
+  const S = car.spec;
+  const pc = g.player;
+  pc.skid = S.ramSkid;
+  pc.skidGrip = S.ramSkidGrip;
+  pc.body.setAngularVelocity(pc.body.getAngularVelocity() + (Math.random() < 0.5 ? -1 : 1) * S.ramSpin);
+  const p = pc.body.getPosition();
+  addShake(g.fx, 0.15);
+  burst(g.fx, p.x, p.y, '#ff2d3d', 6, 4, 0.35, 0.16);
+  if (!CONFIG.features.damage) return;
+  const dmg = car.spec.ramDamage;
+  hurt(g, dmg, 'cop');
+  g.hurtFlash = Math.min(1, g.hurtFlash + 0.35);
+  floatText(g.fx, p.x, p.y - 1.2, `-${dmg}`, '#ff6b6b');
 }
 
 // True while the player is slow and pressed against 2+ things, at least one a car.

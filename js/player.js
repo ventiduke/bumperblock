@@ -47,7 +47,13 @@ export function updatePlayer(p, dt, steer, brake = false) {
   const w = body.getAngularVelocity();
   body.setAngularVelocity(w + (targetW - w) * Math.min(1, P.steerResponse * dt));
 
-  applyGrip(body, P.lateralGrip * surf.grip);
+  // Skidding (e.g. after a police ram): traction mostly gone for a moment.
+  let skid = 1;
+  if (p.skid > 0) {
+    p.skid -= dt;
+    skid = p.skidGrip;
+  }
+  applyGrip(body, P.lateralGrip * surf.grip * skid);
 
   const fwd = forwardOf(body);
   if (brake && !boosting) {

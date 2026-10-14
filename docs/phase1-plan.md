@@ -356,3 +356,28 @@ since those are what a skill tree would eventually unlock.
 alias), and **1 / 2 / 3** equip Chameleon / Phase / Tow directly, following
 the order in `abilities.list`. Q still cycles. Neither key swaps while an
 ability is active.
+
+## Round 6: police tuning
+
+Feedback: "The cops don't feel threatening enough. Maybe they push harder and
+chase us down faster?"
+
+- **Root cause:** a cop pressing steadily against the player produced contact
+  impulses above the normal 1.2 N·s stun threshold every step. So it stunned
+  itself continuously and stopped pushing. Stun thresholds are now per type
+  (`stunImpulse`), and police use 8: they only stop for genuinely hard hits,
+  and recover in 0.4 s (`stunTime`).
+- **Chase:**
+  - Speed went from 3.6 to 5.5 m/s, with accel 16 and turn rate 3.4.
+  - They spot you from 16 m (was 12) and aim 0.4 s ahead of your velocity
+    (`lead`).
+  - A cop catches a circling player in about 2.3 s.
+- **Push:** density went from 1.3 to 3.0, and lateral grip to 0.6. Even so,
+  the player's tire grip (about 3× any car's drive force) made steady pushing
+  ineffective. So cops now **ram**: while touching the player they apply a
+  `ramShove` (3.5 m/s) kick along their heading every `ramCooldown` (0.8 s),
+  cost `ramDamage` (3 HP), and cut the player's grip to 10% for 0.4 s, plus a
+  little spin. Pinned against a wall by one cop, the player gets shoved about
+  2.7 m and loses about 16 HP over 3.5 s.
+- **Cap:** at most `police.max` (3) on the field. The spawn pick falls back to
+  a car beyond that.

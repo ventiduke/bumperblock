@@ -166,8 +166,15 @@ export const CONFIG = {
     // Semi: a cab plus a trailer on a hinge; each body counts 1 (2 total).
     semi: { length: 1.7, width: 1.15, counts: 1, density: 1.3, speed: 1.8, accel: 5, turnRate: 1.2,
       trailer: { length: 3.4, width: 1.15, density: 1.1, lateralGrip: 0.3 }, hingeLimit: 1.3 },
-    // Police chase the player when within chaseRange.
-    police: { length: 1.9, width: 1.0, counts: 1, density: 1.3, speed: 3.6, accel: 9, turnRate: 2.4, chaseRange: 12 },
+    // Police chase the player when within chaseRange, aiming `lead` seconds
+    // ahead of where you're going. Heavy and grippy so they shove you around,
+    // and they shake off hits fast (short stunTime). At most `max` at a time.
+    police: { length: 1.9, width: 1.0, counts: 1, density: 3.0, speed: 5.5, accel: 16, turnRate: 3.4,
+      lateralGrip: 0.6, stunTime: 0.4, stunImpulse: 8, chaseRange: 16, lead: 0.4, max: 3,
+      // Ram: while touching the player, slam it every ramCooldown seconds with
+      // a ramShove (m/s) kick along the cop's heading, costing ramDamage HP.
+      // The ram also breaks your traction: grip x ramSkidGrip for ramSkid seconds.
+      ramShove: 3.5, ramCooldown: 0.8, ramDamage: 3, ramSkid: 0.4, ramSkidGrip: 0.1, ramSpin: 1.5 },
   },
   vehicleMix: { car: 55, motorcycle: 14, bus: 11, semi: 10, police: 10 }, // spawn weights
   convoy: { types: 3, mult: 1.5 },  // match with 3+ vehicle types: points x1.5

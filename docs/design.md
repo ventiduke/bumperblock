@@ -55,7 +55,9 @@ Minimal by design:
   - **Motorcycle:** small, light and fast; it slips through gaps.
   - **Bus:** long, heavy and slow, and counts as 2. It makes a great bridge.
   - **Semi:** a cab plus a trailer on a hinge that jackknifes, counting 2.
-  - **Police:** chases you when you're nearby.
+  - **Police:** runs you down when you're nearby. It's fast, heavy and hard
+    to stun, and it rams you while in contact: a hard shove that breaks your
+    traction and costs health. At most a few at a time.
 - A match containing three different types is a **convoy**, worth ×1.5
   points.
 - Later levels mix in the bigger and more dangerous types.

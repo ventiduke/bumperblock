@@ -28,8 +28,12 @@ export function pickType(game) {
   let total = 0;
   for (const w of Object.values(mix)) total += w;
   let r = Math.random() * total;
-  for (const [type, w] of Object.entries(mix)) if ((r -= w) < 0) return type;
-  return 'car';
+  let type = 'car';
+  for (const [t, w] of Object.entries(mix)) if ((r -= w) < 0) { type = t; break; }
+  // Respect a per-type cap (e.g. police.max).
+  const max = CONFIG.vehicles[type]?.max;
+  if (max != null && game.cars.filter((c) => c.type === type).length >= max) return 'car';
+  return type;
 }
 
 // Pick a random point along a random edge, facing into the arena. Long
