@@ -272,3 +272,29 @@ color. This round adds **level goals** (winning) and **damage and repair**
   - The level and goal are shown top center.
   - Health and the repair swatch are on the top right.
   - The top boost bar was removed; the boost button's ring is the meter.
+
+## Playtest round 4: repair windows, boost placement, pile-ups
+
+Feedback from the fourth playtest:
+
+- It felt good overall.
+- For extra difficulty, a health type doesn't always need to be on the field.
+- The boost button was too close to where the thumb rests to steer.
+- The winning strategy was to wait for a big blob, then plow through it.
+  There should be a consequence for letting a blob build, while a "clean-up
+  save" stays possible.
+
+| Feedback | Change |
+| --- | --- |
+| Not always a repair color | Repair windows alternate: a color for `damage.repairOnTime` (18 s), then none for `repairOffTime` (12 s), with a "No repairs for now" banner and a greyed swatch. Each new window picks a different color than the last one. |
+| Boost too close to steering | The button moved to the vertical middle of the right edge and shrank to 76 px. A **quick upward swipe** on either side also boosts (`config.input`: 45 px within 350 ms), once per touch. Slow drags don't trigger it, so steering is safe. |
+| Blob-waiting strategy | **Pile-ups** (`js/pileup.js`, `config.pileup`, `features.pileups`): touching AI cars of any color are union-found into clumps. Cars in a clump of `size` (7) or more that aren't already counting down build up rust, and turn to junk after `rustTime` ±`rustJitter` (6 ± 1.5 s). Rust drains at `recover` times the rate once the clump breaks up. **Junk** is grey with rust spots, `junkDensity` × heavier, high damping, doesn't drive, and never matches (color −1). It still counts for boxing in, for squeeze damage, and toward pile size. **Clean-up save:** an explosion destroys junk within `clearRadius` (2.6 m) of any exploding car, at `pointsPerJunk` each. |
+
+**Measurement** (player parked, damage off):
+
+- Level 1 has about 8 junk at 40 s, 35 at 80 s, and about 73 of 80 cars at
+  120 s.
+- Level 3 has about 21 junk at 60 s and 56 at 80 s.
+
+So waiting it out turns the arena into a junkyard within about two minutes.
+If that's too harsh, raise `pileup.size` or `rustTime`.

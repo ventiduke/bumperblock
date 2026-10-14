@@ -88,12 +88,25 @@ Minimal by design:
   - Boost-rams and fast wall hits cost a little, so boost is a risk/reward
     choice.
   - Normal rams are free, because bumping is the fun part.
-- **Repair:** one color is the repair color, marked by a white cross on its
-  cars and a swatch next to the health bar. Exploding it heals you. It rotates
-  every ~25 s, so you have to keep switching targets.
+- **Repair:** sometimes one color is the repair color, marked by a white
+  cross on its cars and a swatch next to the health bar. Exploding it heals
+  you. Repair windows come and go: ~18 s with a repair color, then ~12 s with
+  none. Each new window picks a different color, so you can't count on a heal
+  whenever you want one.
 - At zero health you're **wrecked**. Being boxed in still ends the run too.
 - The core tension: the order needs blues, the repair color is red, and both
   are in the crowd.
+
+## Pile-ups
+
+- A big clump of touching cars (7 or more, any colors) that holds together
+  starts to **rust**. Its cars brown over, blink, and then turn into grey
+  **junk**: heavy wreckage that can't be matched, doesn't drive, and still
+  boxes you in. Cars that bump into junk get caught in the pile-up too.
+- Explosions destroy junk right next to the exploding cars, for bonus points.
+  Popping a match inside a blob is the "clean-up save", but only if you get
+  there in time.
+- This makes "wait for a giant blob, then plow through it" a losing strategy.
 
 ## Losing
 
