@@ -21,12 +21,18 @@ export function abilityLabel(name) {
   return { chameleon: 'CHAMELEON', phase: 'PHASE', tow: 'TOW' }[name] || name.toUpperCase();
 }
 
-export function cycleAbility(g) {
+// Equip ability `index` from the list (number keys). Not while one is active.
+export function selectAbility(g, index) {
   const p = g.player;
-  if (p.abilityTime > 0 || p.towed) return; // finish the current one first
   const list = CONFIG.abilities.list;
-  p.ability = list[(list.indexOf(p.ability) + 1) % list.length];
-  p.abilityCharge = Math.min(p.abilityCharge, 1);
+  if (p.abilityTime > 0 || p.towed || index < 0 || index >= list.length) return false;
+  p.ability = list[index];
+  return true;
+}
+
+export function cycleAbility(g) {
+  const list = CONFIG.abilities.list;
+  return selectAbility(g, (list.indexOf(g.player.ability) + 1) % list.length);
 }
 
 export function useAbility(g) {

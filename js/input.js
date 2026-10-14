@@ -8,6 +8,7 @@ export function createInput(canvas, boostButton, abilityButton, cycleButton) {
   let boostQueued = false;
   let abilityQueued = false;
   let cycleQueued = false;
+  let selectQueued = -1; // ability index from the number keys
 
   const sideOf = (e) => (e.clientX < window.innerWidth / 2 ? -1 : 1);
 
@@ -71,10 +72,12 @@ export function createInput(canvas, boostButton, abilityButton, cycleButton) {
     } else if (e.code === 'Space') {
       if (!e.repeat) boostQueued = true;
       e.preventDefault();
-    } else if (e.code === 'KeyE' && !e.repeat) {
-      abilityQueued = true;
+    } else if ((e.code === 'KeyF' || e.code === 'KeyE') && !e.repeat) {
+      abilityQueued = true; // F (E also works)
     } else if (e.code === 'KeyQ' && !e.repeat) {
       cycleQueued = true;
+    } else if (/^(Digit|Numpad)[1-9]$/.test(e.code) && !e.repeat) {
+      selectQueued = Number(e.code.slice(-1)) - 1;
     }
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
@@ -126,10 +129,17 @@ export function createInput(canvas, boostButton, abilityButton, cycleButton) {
       cycleQueued = false;
       return c;
     },
+    // Index of an ability picked with the number keys, or -1.
+    consumeSelect() {
+      const i = selectQueued;
+      selectQueued = -1;
+      return i;
+    },
     reset() {
       boostQueued = false;
       abilityQueued = false;
       cycleQueued = false;
+      selectQueued = -1;
     },
   };
 }

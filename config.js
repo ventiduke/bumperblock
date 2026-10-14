@@ -100,7 +100,8 @@ export const CONFIG = {
   },
 
   // Second ability slot (left edge). One is equipped at a time; the small
-  // swap button (or Q) cycles through `list`. E / the button uses it.
+  // swap button (or Q) cycles through `list`, and 1/2/3 pick directly.
+  // F (or E) / the button uses it.
   abilities: {
     list: ['chameleon', 'phase', 'tow'],
     start: 'chameleon',

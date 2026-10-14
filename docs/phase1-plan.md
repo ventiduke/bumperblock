@@ -351,3 +351,8 @@ since those are what a skill tree would eventually unlock.
   - the convoy bonus
 
   All 47 earlier checks still pass.
+
+**Follow-up:** on desktop, **F** now uses the ability (E still works as an
+alias), and **1 / 2 / 3** equip Chameleon / Phase / Tow directly, following
+the order in `abilities.list`. Q still cycles. Neither key swaps while an
+ability is active.

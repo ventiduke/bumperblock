@@ -13,7 +13,7 @@ import { createHUD } from './hud.js';
 import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
 import { initDamage, impactDamage, updateDamage, repairFrom } from './damage.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
-import { initAbilities, useAbility, cycleAbility, updateAbilities } from './abilities.js';
+import { initAbilities, useAbility, cycleAbility, selectAbility, updateAbilities } from './abilities.js';
 
 const pl = window.planck;
 const params = new URLSearchParams(location.search);
@@ -234,10 +234,11 @@ function step(g, dt) {
   }
   const p = g.player;
   if (input.consumeBoost()) tryBoost(p);
-  if (input.consumeCycle()) {
-    cycleAbility(g);
-    equipped = p.ability;
-  }
+  // Number keys pick an ability directly; Q / the swap button cycle.
+  const pick = input.consumeSelect();
+  const cycle = input.consumeCycle();
+  const swapped = pick >= 0 ? selectAbility(g, pick) : cycle && cycleAbility(g);
+  if (swapped) equipped = p.ability;
   if (input.consumeAbility()) useAbility(g);
   updateAbilities(g, dt);
   updatePlayer(p, dt, input.steer(), input.brake());
