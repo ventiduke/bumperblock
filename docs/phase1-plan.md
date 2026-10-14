@@ -194,3 +194,33 @@ you're boxed in, whatever you're pressing.
 
 **Not done yet:** heavy cars that need a group of 4+. These are noted in
 `design.md` as a future idea.
+
+## Playtest round 2: feedback and changes
+
+Feedback from the second playtest:
+
+- Much of round 1 worked, but it still felt too easy.
+- Try requiring the player to be part of the chain, rather than tagging.
+- The arena felt small: add some space so the terrain has room, with a camera
+  follow.
+- Add more colors as the level goes on.
+
+| Feedback | Change |
+| --- | --- |
+| Too easy, player should be in the chain | New default `match.mode = 'chain'`. A group arms only while the player's car is within `contactMargin` of one of its cars. The player is a wildcard link that joins every same-color car it touches, but it doesn't count toward `minGroup`. The countdown cancels if the player pulls away; it isn't sticky. A white line from the player to the linked cars shows it's counting. `'tagged'`, `'touch'`, and `'any'` remain as options. |
+| Bigger arena, camera | The arena went from 25 × 14 to 40 × 24 m. The camera eases toward the player plus 0.35 s of velocity lead and clamps to the arena (`config.camera`). The view is 14 m tall, so about 30 × 14 m shows on a phone. A minimap (top left) shows terrain, every car, the player, and the current view. Off-screen cars and particles aren't drawn. The terrain was redone for the larger space: two wall stubs, a central island, two pillars, two ice patches, and two mud patches. |
+| More colors over time | `colors` holds six colors, and `colorSchedule` sets how many are active over time: 3 at 0 s, 4 at 45 s, 5 at 100 s, 6 at 170 s. A "New color!" toast shows the new swatch. |
+| Keep the risk | A bigger arena with wandering AI rarely boxes you in. `spawn.maxCars` went to 80 (about the same density as before) with a faster ramp. **AI drift:** each wander decision heads toward the player with a chance that ramps from 0 to `ai.seekMax` (0.35) over `spawn.rampTime`. |
+
+**Bot measurements** (6 runs each, 4-minute cap, 0.6 s reaction to being
+pinned):
+
+- A random-steering bot survives about 187 s and scores about 490.
+- A bot that drives at the nearest primed group scores more (about 630 by
+  55 s), but dies at about 52 s.
+
+So aggressive play pays but carries risk. With `ai.seekMax` at 0.5 the numbers
+barely changed.
+
+**Perf:** 60 cars took about 0.6 ms per physics step and ran at 60 fps
+(headless, unthrottled).

@@ -12,7 +12,7 @@ Play in landscape.
 - **Phone:** hold the left or right half of the screen to steer, hold both halves to brake and then reverse, and tap **BOOST** (bottom right).
 - **Desktop:** A/D or arrow keys to steer, S or Down to brake and reverse, Space to boost, R to restart.
 
-Bump cars to tag them (orange outline). A same-color group of 3+ explodes only if one of its cars is tagged. Untouched groups wait, primed, until you hit them.
+A same-color group of 3+ cars explodes only while your car is part of the chain: touching it, or wedged between same-color cars (you're a wildcard link, but don't count toward the 3). Hold contact for a moment; pull away and it cancels. More colors appear as the game goes on. The minimap (top left) shows the whole arena.
 
 ## Development
 

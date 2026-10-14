@@ -43,7 +43,9 @@ Minimal by design:
 ## AI cars
 
 - Each car has properties. For now that's just **color** (3–4 colors).
-- Most cars wander aimlessly at modest speed.
+- Most cars wander aimlessly at modest speed. As the level goes on, the crowd
+  drifts increasingly toward the player. That makes being boxed in a real
+  threat, and aggressive play riskier.
 - Later types may behave differently, e.g. **chasers** that target the
   player, **heavies** that are hard to push, or **wildcards** that match any
   color.
@@ -55,12 +57,16 @@ Minimal by design:
   contacts, not just pairs).
 - A group of 3 or more explodes after a short delay (~0.3 s) so the player
   can see the match form.
-- **The player sets matches off.** A car the player touches is *tagged* for a
-  few seconds; a tagged car that is knocked hard into another passes the tag
-  on, and blast shockwaves tag what they hit. A matching group explodes only if
-  one of its cars is tagged. Groups the AI forms on its own sit *primed*
-  (dashed links, slow glow) until the player bumps them. Explosions should
-  always feel like something you did.
+- **The player is part of the chain.** A group explodes only while the
+  player's car is touching it. The player also works as a wildcard link:
+  red–player–red–red counts as a chain of three reds. The player doesn't count
+  toward the three. Pull away before the short delay ends and the match
+  cancels, so matches are a deliberate shove-and-hold. Groups the AI forms on
+  its own sit *primed* (dashed links, slow glow) until the player joins them.
+  Explosions should always feel like something you did.
+- **More colors over time.** A level starts with three colors and adds more
+  as it goes on (up to six). More colors means fewer same-color neighbors, so
+  matches get harder while the arena fills up.
 - Bigger groups and quick chains of explosions are worth more.
 
 ## Losing
@@ -72,8 +78,9 @@ Minimal by design:
 
 - **Weighty bumps.** Collisions have heft: cars don't glide forever or bounce
   like balloons. A hit moves a car a satisfying distance, and it stops.
-- **Readable.** You can always see the whole arena and tell which cars are
-  about to match.
+- **Readable.** You can always tell which cars are about to match. The arena
+  is somewhat larger than the screen; the camera follows the player, and a
+  minimap shows the whole arena.
 - **Juicy.** Explosions, particles, small screen shake on hard hits.
 
 ## Terrain
