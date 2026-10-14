@@ -1,7 +1,9 @@
-// Steering from touch halves / keyboard, plus boost button and Space.
+// Steering from touch halves / keyboard, plus boost (button, swipe up, Space).
+import { CONFIG } from '../config.js';
 
 export function createInput(canvas, boostButton) {
   const touches = new Map(); // pointerId -> -1 | 1
+  const swipes = new Map(); // pointerId -> { y, t, fired }
   const keys = new Set();
   let boostQueued = false;
 
@@ -10,12 +12,24 @@ export function createInput(canvas, boostButton) {
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     touches.set(e.pointerId, sideOf(e));
+    swipes.set(e.pointerId, { y: e.clientY, t: performance.now(), fired: false });
     canvas.setPointerCapture?.(e.pointerId);
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (touches.has(e.pointerId)) touches.set(e.pointerId, sideOf(e));
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, sideOf(e));
+    // Quick upward flick = boost (once per touch); steering carries on.
+    const sw = swipes.get(e.pointerId);
+    const I = CONFIG.input;
+    if (I.swipeBoost && sw && !sw.fired && performance.now() - sw.t <= I.swipeMs && sw.y - e.clientY >= I.swipePx) {
+      sw.fired = true;
+      boostQueued = true;
+    }
   });
-  const release = (e) => touches.delete(e.pointerId);
+  const release = (e) => {
+    touches.delete(e.pointerId);
+    swipes.delete(e.pointerId);
+  };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
   canvas.addEventListener('lostpointercapture', release);
