@@ -170,3 +170,27 @@ Things headless testing turned up, and the changes made:
   60 fps unthrottled and ~36 fps at 4× throttle on the software rasterizer. A
   real phone's GPU-backed canvas should do better. `render.maxDpr` is the
   fill-rate lever if it doesn't.
+
+## Playtest round 1: feedback and changes
+
+Feedback from the first phone playtest:
+
+- It felt fun right away.
+- Matches happened at random, so it wasn't clear what the player was doing.
+- The car was too fast to position precisely.
+- There was never any risk of losing.
+- Terrain was requested, and the default orientation should be landscape.
+
+| Feedback | Change |
+| --- | --- |
+| Random matches, unclear agency | `match.mode = 'tagged'` (default): a group explodes only if a car in it was recently touched by the player (`tagTime`, 4 s). A tagged car passes the tag on only when it hits another car hard (`carryImpulse`), so knock-on shots count but ordinary AI bumps don't spread it. Blasts tag what they shove, so chains still work. Untouched matching groups are **primed** (dashed links and a slow glow) and wait for a bump. Tagged cars get an orange outline. The other modes are `'touch'` (the player must be touching the group) and `'any'` (the original behavior). |
+| Hard to position | Holding both sides (or S / Down) brakes at 28 m/s², then reverses up to 3.5 m/s, with white reverse lights. Top speed went from 8.5 to 7 m/s. |
+| No risk | The tagged mode removes free clears, so the arena fills. With a random-steering bot, average survival dropped from about 160 s to about 96 s (50 s if it never tries to escape pins), and the board reaches the 40-car cap. |
+| Terrain | New `config.terrain`: `blocks` (static walls), plus `zones` of `ice` (grip ×0.08, damping ×0.15) and `mud` (top speed ×0.45, damping ×2.5). These apply to the player and the AI. AI ray-casts ahead and bounces its heading off blocks. The center blocks are attached to the top and bottom walls, because thin gaps between a block and a wall jammed cars. |
+| Landscape | The arena is now 25 × 14. The HUD moves into the side margins when they're wide enough (`render.sideHudPx`), with safe-area insets respected. Holding a phone upright shows a "rotate your phone" overlay and pauses the game. Android Chrome also goes full screen and locks to landscape on the first touch. |
+
+**Assumption:** the stuck timer still runs while braking. If you can't move,
+you're boxed in, whatever you're pressing.
+
+**Not done yet:** heavy cars that need a group of 4+. These are noted in
+`design.md` as a future idea.

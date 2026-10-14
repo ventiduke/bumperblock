@@ -34,8 +34,10 @@ Minimal by design:
 
 - **Steer left / steer right.** On mobile, hold the left or right half of the
   screen. On desktop, A/D or the arrow keys.
+- **Brake / reverse.** Hold both sides at once (or S / Down on desktop): the
+  car brakes hard, then slowly reverses. This is for lining up shots.
 - **One or two ability buttons.** The first is **Boost**: a short speed burst
-  on a recharging meter. Future abilities might include a brake/spin or a
+  on a recharging meter. Future abilities might include a spin or a
   shockwave.
 
 ## AI cars
@@ -53,6 +55,12 @@ Minimal by design:
   contacts, not just pairs).
 - A group of 3 or more explodes after a short delay (~0.3 s) so the player
   can see the match form.
+- **The player sets matches off.** A car the player touches is *tagged* for a
+  few seconds; a tagged car that is knocked hard into another passes the tag
+  on, and blast shockwaves tag what they hit. A matching group explodes only if
+  one of its cars is tagged. Groups the AI forms on its own sit *primed*
+  (dashed links, slow glow) until the player bumps them. Explosions should
+  always feel like something you did.
 - Bigger groups and quick chains of explosions are worth more.
 
 ## Losing
@@ -68,14 +76,26 @@ Minimal by design:
   about to match.
 - **Juicy.** Explosions, particles, small screen shake on hard hits.
 
+## Terrain
+
+Arenas have features that change how you drive and where cars pile up:
+
+- **Blocks**: solid walls inside the arena that create chokepoints and corners
+  to get trapped in (or to trap cars against).
+- **Ice**: almost no grip. Cars keep sliding sideways and coast further.
+- **Mud**: heavy drag. Top speed drops to under half.
+- Later: ramps, bumpers, conveyor strips, moving walls.
+
 ## Presentation
 
-- Portrait phone, full screen, one-handed or two-thumb play.
+- Landscape phone, full screen, two-thumb play. Holding the phone upright
+  shows a "rotate your phone" prompt and pauses.
 - Simple shapes and flat colors for now. Art, sound, and music come later.
 
 ## Future ideas (not in Phase 1)
 
-- Targeting / chaser AI, heavy cars, wildcard cars.
+- Targeting / chaser AI, wildcard cars.
+- Heavy cars that need a bigger group (e.g. 4+) or two hits to tag.
 - Additional abilities (shockwave, brake-spin), power-ups dropped by
   explosions.
 - Levels with goals (clear N reds, survive T seconds), progression, menus.
