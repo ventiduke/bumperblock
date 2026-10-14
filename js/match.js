@@ -10,11 +10,12 @@ function find(parent, i) {
   return i;
 }
 
-// Returns { links, groups, primed, ready }:
-//   links  - [carA, carB, sameColor] for every touching AI pair (for debug/visuals)
-//   groups - armed qualifying (>= minGroup) groups, counting down
-//   primed - qualifying groups waiting for the player (see match.mode)
-//   ready  - subset of groups whose countdown has finished
+// Returns { links, playerLinks, groups, primed, ready }:
+//   links       - [carA, carB, sameColor] for every touching AI pair
+//   playerLinks - cars touching the player that are in a counting-down group
+//   groups      - armed qualifying (>= minGroup) groups, counting down
+//   primed      - qualifying groups waiting for the player (see match.mode)
+//   ready       - subset of groups whose countdown has finished
 export function updateMatches(game, dt) {
   const M = CONFIG.match;
   const cars = game.cars;
@@ -56,6 +57,23 @@ export function updateMatches(game, dt) {
     }
   }
 
+  // Chain mode: the player is a wildcard link, joining every same-color car
+  // it touches into one chain.
+  if (M.mode === 'chain') {
+    const firstOfColor = new Map();
+    for (const car of nearPlayer) {
+      const i = index.get(car);
+      if (i === undefined) continue;
+      const first = firstOfColor.get(car.color);
+      if (first === undefined) firstOfColor.set(car.color, i);
+      else {
+        const ra = find(parent, first);
+        const rb = find(parent, i);
+        if (ra !== rb) parent[ra] = rb;
+      }
+    }
+  }
+
   const comps = new Map();
   for (let i = 0; i < cars.length; i++) {
     const r = find(parent, i);
@@ -91,12 +109,18 @@ export function updateMatches(game, dt) {
     gid++;
   }
 
-  return { links, groups, primed, ready };
+  const playerLinks = [];
+  if (M.mode === 'chain') {
+    for (const car of nearPlayer) if (car.groupId >= 0) playerLinks.push(car);
+  }
+  return { links, playerLinks, groups, primed, ready };
 }
 
-// A countdown, once started, keeps going even if the trigger lapses.
+// In chain mode the player must stay connected for the whole countdown.
+// Otherwise a countdown, once started, keeps going even if the trigger lapses.
 function isArmed(list, mode, nearPlayer) {
   if (mode === 'any') return true;
+  if (mode === 'chain') return list.some((car) => nearPlayer.has(car));
   for (const car of list) {
     if (car.matchTimer > 0) return true;
     if (mode === 'touch' ? nearPlayer.has(car) : car.tag > 0) return true;
