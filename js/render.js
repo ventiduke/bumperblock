@@ -1,46 +1,46 @@
-// Canvas renderer. The whole arena is scaled to fit the screen.
+// Canvas renderer. A camera follows the player around an arena larger than
+// the screen; a minimap shows the whole arena.
 import { CONFIG } from '../config.js';
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
-  const r = { canvas, ctx, scale: 1, ox: 0, oy: 0, dpr: 1, w: 0, h: 0 };
+  const r = { canvas, ctx, scale: 1, ox: 0, oy: 0, dpr: 1, w: 0, h: 0, inset: null };
   const resize = () => {
     r.dpr = Math.min(window.devicePixelRatio || 1, CONFIG.render.maxDpr);
     r.w = window.innerWidth;
     r.h = window.innerHeight;
     canvas.width = Math.round(r.w * r.dpr);
     canvas.height = Math.round(r.h * r.dpr);
-    const { width: W, height: H } = CONFIG.arena;
-    const R = CONFIG.render;
-    const pad = 0.35; // visible wall rim in meters
-    const inset = safeInsets();
-    const w = r.w - inset.left - inset.right;
-    const h = r.h - inset.top - inset.bottom;
-    const fit = (top) => Math.min((w - 12) / (W + 2 * pad), (h - top - 8) / (H + 2 * pad));
-
-    // Prefer putting the HUD in the side margins (landscape); fall back to a
-    // top bar when the margins are too thin.
-    let top = 0;
-    r.scale = fit(0);
-    r.hudSide = (w - W * r.scale) / 2 >= R.sideHudPx;
-    if (!r.hudSide) {
-      top = R.hudTopPx;
-      r.scale = fit(top);
-    }
-    r.ox = inset.left + (w - W * r.scale) / 2;
-    // In top-bar mode, spare vertical space goes below the arena first so the
-    // boost button doesn't cover a corner.
-    const spare = h - top - 8 - H * r.scale;
-    const below = r.hudSide ? 0 : Math.min(spare, R.boostReservePx);
-    r.oy = inset.top + top + (spare - below) / 2;
-
-    document.body.classList.toggle('hud-side', r.hudSide);
-    document.documentElement.style.setProperty('--side', `${Math.max(0, r.ox - inset.left)}px`);
+    const C = CONFIG.camera;
+    r.scale = Math.min(r.h / C.viewHeight, r.w / C.minViewWidth);
+    r.inset = safeInsets();
   };
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
   resize();
   return r;
+}
+
+const RIM = 0.35; // visible wall rim in meters
+
+// Ease the camera toward a point a little ahead of the player, clamped so the
+// view stays over the arena. snap=true jumps straight there (new game).
+export function updateCamera(r, cam, player, dt, snap = false) {
+  const C = CONFIG.camera;
+  const { width: W, height: H } = CONFIG.arena;
+  const p = player.body.getPosition();
+  const v = player.body.getLinearVelocity();
+  let tx = p.x + v.x * C.lookAhead;
+  let ty = p.y + v.y * C.lookAhead;
+  const hw = r.w / 2 / r.scale, hh = r.h / 2 / r.scale;
+  const clamp = (t, half, size) => (2 * half >= size + 2 * RIM + 2
+    ? size / 2
+    : Math.min(Math.max(t, half - RIM - 1), size - half + RIM + 1));
+  tx = clamp(tx, hw, W);
+  ty = clamp(ty, hh, H);
+  const k = snap ? 1 : 1 - Math.exp(-C.follow * dt);
+  cam.x += (tx - cam.x) * k;
+  cam.y += (ty - cam.y) * k;
 }
 
 // Reads env(safe-area-inset-*) (notches) via a probe element.
@@ -127,6 +127,16 @@ export function render(r, game, debug) {
   const { width: W, height: H } = CONFIG.arena;
   const { length: L, width: CW } = CONFIG.car;
   const fx = game.fx;
+  const cam = game.camera;
+  r.ox = r.w / 2 - cam.x * scale;
+  r.oy = r.h / 2 - cam.y * scale;
+  // Visible world rect (plus a margin) for culling.
+  const m = 2;
+  const view = {
+    x0: cam.x - r.w / 2 / scale - m, x1: cam.x + r.w / 2 / scale + m,
+    y0: cam.y - r.h / 2 / scale - m, y1: cam.y + r.h / 2 / scale + m,
+  };
+  const visible = (p) => p.x > view.x0 && p.x < view.x1 && p.y > view.y0 && p.y < view.y1;
 
   ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0);
   ctx.fillStyle = '#14161c';
@@ -182,10 +192,25 @@ export function render(r, game, debug) {
     ctx.stroke();
   }
 
+  // Chain mode: the player's links into a counting-down group.
+  if (game.matchInfo.playerLinks.length) {
+    const pp = game.player.body.getPosition();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 0.26;
+    ctx.beginPath();
+    for (const car of game.matchInfo.playerLinks) {
+      const p = car.body.getPosition();
+      ctx.moveTo(pp.x, pp.y);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+
   // Cars.
   const now = game.elapsed;
   const base = ctx.getTransform();
   for (const car of game.cars) {
+    if (!visible(car.body.getPosition())) continue;
     drawCar(ctx, car, L, CW, now);
     ctx.setTransform(base);
   }
@@ -194,6 +219,7 @@ export function render(r, game, debug) {
 
   // Particles.
   for (const p of fx.particles) {
+    if (!visible(p)) continue;
     ctx.globalAlpha = Math.max(0, p.life / p.max);
     ctx.fillStyle = p.color;
     ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
@@ -214,6 +240,55 @@ export function render(r, game, debug) {
   ctx.globalAlpha = 1;
 
   if (debug) drawDebug(ctx, game);
+
+  ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0);
+  drawMinimap(ctx, r, game, view, m);
+}
+
+function drawMinimap(ctx, r, game, view, margin) {
+  const mw = CONFIG.render.minimapWidth;
+  if (!mw) return;
+  const { width: W, height: H } = CONFIG.arena;
+  const k = mw / W;
+  const mh = H * k;
+  const x0 = 10 + r.inset.left;
+  const y0 = 56 + r.inset.top;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.fillStyle = 'rgba(10,11,15,0.6)';
+  roundRect(ctx, -4, -4, mw + 8, mh + 8, 6);
+  ctx.fill();
+  ctx.scale(k, k);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(0, 0, W, H);
+  for (const z of CONFIG.terrain.zones) {
+    ctx.fillStyle = z.type === 'ice' ? 'rgba(150,215,255,0.25)' : 'rgba(140,95,50,0.5)';
+    ctx.fillRect(z.x - z.w / 2, z.y - z.h / 2, z.w, z.h);
+  }
+  ctx.fillStyle = '#5a6172';
+  for (const b of CONFIG.terrain.blocks) ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
+  const dot = 1.3;
+  for (const car of game.cars) {
+    const p = car.body.getPosition();
+    ctx.fillStyle = CONFIG.colors[car.color];
+    ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
+  }
+  if (game.player) {
+    const p = game.player.body.getPosition();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Current view.
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 0.35;
+  ctx.strokeRect(
+    Math.max(0, view.x0 + margin), Math.max(0, view.y0 + margin),
+    Math.min(W, view.x1 - margin) - Math.max(0, view.x0 + margin),
+    Math.min(H, view.y1 - margin) - Math.max(0, view.y0 + margin),
+  );
+  ctx.restore();
 }
 
 function carBody(ctx, L, CW, fill, glass) {
