@@ -224,3 +224,51 @@ barely changed.
 
 **Perf:** 60 cars took about 0.6 ms per physics step and ran at 60 fps
 (headless, unthrottled).
+
+## Playtest round 3: urgency and winning
+
+The feedback was that the game still lacked urgency and any sense of winning a
+level. The suggestion was damage on impact, repaired by exploding a certain
+color. This round adds **level goals** (winning) and **damage and repair**
+(urgency). Each can be turned off in `config.features` to compare.
+
+- **Levels** (`js/levels.js`, `config.levels`):
+  - Five scripted levels, then scaling (`levelScaling`). Each sets its colors,
+    its goal (`{ total }` or `{ each }`), its starting cars, its spawn pace,
+    and a par time.
+  - Completing a level pauses play and shows the results: time, health, a
+    bonus (`levelBonus`), and stars (3 at or under par, 2 within 1.5× par).
+  - The score carries into the next level. Retry (↻, R, or the game-over
+    button) replays the current level from its starting score. "Level 1"
+    starts over.
+  - With levels on, the color count is fixed per level and `colorSchedule`
+    only applies in endless mode.
+- **Damage** (`js/damage.js`, `config.damage`):
+  - **Fault-based impacts.** A `pre-solve` hook records each side's closing
+    speed before the solver runs. Hits by AI are scaled by the other car's
+    share and use their own lower threshold (`hitThreshold`). Boost-rams take
+    at least `boostRamMult`, and walls `wallMult`; both use `impactThreshold`.
+  - **Squeeze:** while slower than `squeezeSpeed` and touching two or more
+    bodies, at least one of them a car.
+  - **Wear:** a constant `drainPerSec`.
+  - **Repair:** exploding the repair color heals `healPerCar` per car. The
+    repair color rotates every `repairRotate` seconds, with a banner.
+  - **Feedback:** red flash and a "-N" number on hits, dents as health drops,
+    smoke below 50%, and "Wrecked!" at zero.
+- **First tuning pass.** Flat impact damage made ramming into packed clusters
+  (which chain mode requires) cost about 17 HP per hit, so the game punished
+  its own core action. Fault-based damage fixed that: ramming a car pinned to
+  a wall now costs 0. Boost-escapes from pins were the next biggest cost, so
+  `boostRamMult` went from 0.6 to 0.25. Level 1 went from 20 cars to 15.
+- **Bot numbers** (a seeker that drives at primed groups, with 0.6 s
+  reactions):
+  - Damage is spread across sources: wall, boost, hit, squeeze and wear each
+    account for 10–35%.
+  - The bot rarely clears level 1, mostly because it gets boxed in or can't
+    hold contact long enough to match.
+  - Treat this as a weak lower bound, not a target. Real tuning needs a human
+    playtest.
+- **HUD changes:**
+  - The level and goal are shown top center.
+  - Health and the repair swatch are on the top right.
+  - The top boost bar was removed; the boost button's ring is the meter.

@@ -69,10 +69,37 @@ Minimal by design:
   matches get harder while the arena fills up.
 - Bigger groups and quick chains of explosions are worth more.
 
+## Levels: winning
+
+- Each level gives an order to fill, either "Clear 15 cars" or "Clear 6 of
+  each color", with progress shown in the HUD.
+- Filling the order completes the level. A results screen shows time, health
+  left, a bonus, and 1–3 stars against a par time.
+- Later levels add colors, start with more cars, and spawn faster. Past the
+  scripted levels, orders and pace keep scaling.
+
+## Damage and repair: urgency
+
+- Your car has health. It wears down slowly over time.
+- **Damage comes from pressure, not from your own rams:**
+  - Being squeezed (slow, pressed against two or more things) hurts steadily.
+  - Getting slammed by another car hurts, in proportion to how much of the
+    collision was its fault.
+  - Boost-rams and fast wall hits cost a little, so boost is a risk/reward
+    choice.
+  - Normal rams are free, because bumping is the fun part.
+- **Repair:** one color is the repair color, marked by a white cross on its
+  cars and a swatch next to the health bar. Exploding it heals you. It rotates
+  every ~25 s, so you have to keep switching targets.
+- At zero health you're **wrecked**. Being boxed in still ends the run too.
+- The core tension: the order needs blues, the repair color is red, and both
+  are in the crowd.
+
 ## Losing
 
-- If you're boxed in, unable to move for a sustained moment while pressed
-  against other cars, it's game over.
+- **Boxed in:** unable to move for a sustained moment while pressed against
+  other cars.
+- **Wrecked:** health reaches zero.
 
 ## Feel goals
 
