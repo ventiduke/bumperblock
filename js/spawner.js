@@ -1,7 +1,7 @@
 // Spawns AI cars just inside the arena edges at an increasing rate.
 import { CONFIG } from '../config.js';
 import { areaClear } from './physics.js';
-import { createAI } from './ai.js';
+import { createVehicle, vehicleLength } from './ai.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -22,10 +22,21 @@ export function createSpawner() {
   return { timer: 0 };
 }
 
-// Pick a random point along a random edge, facing into the arena.
-function edgePoint() {
+// Weighted pick from the level's vehicle mix (or CONFIG.vehicleMix).
+export function pickType(game) {
+  const mix = game.level.types || CONFIG.vehicleMix;
+  let total = 0;
+  for (const w of Object.values(mix)) total += w;
+  let r = Math.random() * total;
+  for (const [type, w] of Object.entries(mix)) if ((r -= w) < 0) return type;
+  return 'car';
+}
+
+// Pick a random point along a random edge, facing into the arena. Long
+// vehicles spawn further in so their tail isn't in the wall.
+function edgePoint(len) {
   const { width: W, height: H } = CONFIG.arena;
-  const k = CONFIG.spawn.edgeInset;
+  const k = Math.max(CONFIG.spawn.edgeInset, len * 0.75);
   const side = Math.floor(Math.random() * 4);
   const spread = 0.6;
   switch (side) {
@@ -36,16 +47,22 @@ function edgePoint() {
   }
 }
 
-// Try a few edge points; returns the new car or null if none were clear.
-export function trySpawn(game, avoid = null, avoidDist = 0) {
+// Try a few edge points; returns the new vehicle's bodies, or null if none
+// were clear.
+export function trySpawn(game, avoid = null, avoidDist = 0, type = pickType(game)) {
   const n = game.colors;
+  const len = vehicleLength(type);
+  const half = Math.max(CONFIG.spawn.clearance, len / 2 + 0.3);
   for (let i = 0; i < 6; i++) {
-    const p = edgePoint();
+    const p = edgePoint(len);
     if (avoid && Math.hypot(p.x - avoid.x, p.y - avoid.y) < avoidDist) continue;
-    if (!areaClear(game.world, p.x, p.y, CONFIG.spawn.clearance)) continue;
-    const car = createAI(game.world, p.x, p.y, p.angle, Math.floor(Math.random() * n));
-    game.cars.push(car);
-    return car;
+    // For long vehicles, check the box centered on the middle of the vehicle.
+    const back = (len - CONFIG.vehicles[type].length) / 2;
+    const cx = p.x - Math.cos(p.angle) * back, cy = p.y - Math.sin(p.angle) * back;
+    if (!areaClear(game.world, cx, cy, half)) continue;
+    const bodies = createVehicle(game.world, p.x, p.y, p.angle, Math.floor(Math.random() * n), type);
+    game.cars.push(...bodies);
+    return bodies;
   }
   return null;
 }

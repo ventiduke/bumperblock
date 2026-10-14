@@ -7,6 +7,9 @@ const { Vec2 } = pl;
 export const CAT_WALL = 0x0001;
 export const CAT_CAR = 0x0002;
 export const CAT_SENSOR = 0x0004;
+export const CAT_BLOCK = 0x0008; // terrain blocks (phase passes through these, not arena walls)
+export const SOLID_MASK = CAT_CAR | CAT_WALL | CAT_BLOCK | CAT_SENSOR;
+export const SENSOR_MASK = CAT_CAR;
 
 export function createWorld() {
   const world = new pl.World({ gravity: Vec2(0, 0) });
@@ -27,9 +30,11 @@ export function createWorld() {
   return world;
 }
 
-// Car object shared by player and AI. Forward is local +x.
-export function createCar(world, { x, y, angle, kind, color = -1, tune }) {
-  const { length: L, width: Wd } = CONFIG.car;
+// Car object shared by player and AI. Forward is local +x. `length`/`width`
+// default to CONFIG.car (vehicle types pass their own).
+export function createCar(world, { x, y, angle, kind, color = -1, tune, length, width }) {
+  const L = length ?? CONFIG.car.length;
+  const Wd = width ?? CONFIG.car.width;
   const body = world.createBody({
     type: 'dynamic',
     position: Vec2(x, y),
@@ -40,6 +45,8 @@ export function createCar(world, { x, y, angle, kind, color = -1, tune }) {
   });
   const car = {
     kind, color, body, tune,
+    length: L,
+    width: Wd,
     id: nextId++,
     matchTimer: 0,
     groupId: -1,
@@ -48,20 +55,20 @@ export function createCar(world, { x, y, angle, kind, color = -1, tune }) {
     flash: 0,
   };
   body.setUserData(car);
-  body.createFixture(pl.Box(L / 2, Wd / 2), {
+  car.solid = body.createFixture(pl.Box(L / 2, Wd / 2), {
     density: tune.density,
     friction: CONFIG.physics.friction,
     restitution: CONFIG.physics.restitution,
     filterCategoryBits: CAT_CAR,
-    filterMaskBits: CAT_CAR | CAT_WALL | CAT_SENSOR,
+    filterMaskBits: SOLID_MASK,
     userData: { kind: 'solid', car },
   });
   const m = CONFIG.match.contactMargin;
-  body.createFixture(pl.Box(L / 2 + m, Wd / 2 + m), {
+  car.sensor = body.createFixture(pl.Box(L / 2 + m, Wd / 2 + m), {
     density: 0,
     isSensor: true,
     filterCategoryBits: CAT_SENSOR,
-    filterMaskBits: CAT_CAR,
+    filterMaskBits: SENSOR_MASK,
     userData: { kind: 'sensor', car },
   });
   return car;

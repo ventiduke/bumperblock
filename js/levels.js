@@ -18,6 +18,7 @@ export function getLevel(i) {
     total: base.goal.total != null ? base.goal.total + grow * 2 : null,
     each: base.goal.each != null ? base.goal.each + grow : null,
     par: base.par,
+    types: base.types ?? null,
     initialCars: base.initialCars ?? CONFIG.spawn.initialCars,
     spawn: {
       startInterval: (base.spawn?.startInterval ?? CONFIG.spawn.startInterval) * f,
@@ -35,6 +36,7 @@ export function endlessLevel() {
     total: null,
     each: null,
     par: 0,
+    types: null,
     initialCars: CONFIG.spawn.initialCars,
     spawn: {
       startInterval: CONFIG.spawn.startInterval,

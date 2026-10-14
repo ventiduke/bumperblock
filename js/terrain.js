@@ -1,7 +1,7 @@
 // Terrain: solid blocks inside the arena and surface zones (ice, mud) that
 // change how cars handle.
 import { CONFIG } from '../config.js';
-import { CAT_WALL, CAT_CAR } from './physics.js';
+import { CAT_BLOCK, CAT_CAR } from './physics.js';
 
 const pl = window.planck;
 const NORMAL = { grip: 1, damping: 1, accel: 1, speed: 1 };
@@ -15,7 +15,7 @@ export function createTerrain(world) {
     body.createFixture(pl.Box(b.w / 2, b.h / 2, pl.Vec2(b.x, b.y), 0), {
       friction: CONFIG.physics.wallFriction,
       restitution: CONFIG.physics.restitution,
-      filterCategoryBits: CAT_WALL,
+      filterCategoryBits: CAT_BLOCK,
       filterMaskBits: CAT_CAR,
       userData: { kind: 'wall' },
     });

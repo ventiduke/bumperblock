@@ -5,10 +5,46 @@ import { CONFIG } from '../config.js';
 import { createCar, applyGrip, applyDrive } from './physics.js';
 import { surfaceAt, obstacleAhead } from './terrain.js';
 
+const pl = window.planck;
 const rand = (a, b) => a + Math.random() * (b - a);
 
-export function createAI(world, x, y, angle, color) {
-  const car = createCar(world, { x, y, angle, kind: 'ai', color, tune: CONFIG.ai });
+// Tuning for a vehicle type: CONFIG.ai with the type's overrides on top.
+export function vehicleSpec(type) {
+  return { ...CONFIG.ai, ...CONFIG.vehicles[type] };
+}
+
+// Overall length of a vehicle type (semi = cab + trailer), for spawn spacing.
+export function vehicleLength(type) {
+  const v = CONFIG.vehicles[type];
+  return v.length + (v.trailer ? v.trailer.length + 0.1 : 0);
+}
+
+// Create an AI vehicle; returns its bodies' car objects (a semi has two:
+// cab first, then trailer, hinged together).
+export function createVehicle(world, x, y, angle, color, type = 'car') {
+  const spec = vehicleSpec(type);
+  const cab = createAI(world, x, y, angle, color, type, spec);
+  if (!spec.trailer) return [cab];
+  const T = { ...spec, ...spec.trailer };
+  const gap = 0.1;
+  const back = spec.length / 2 + gap + T.length / 2;
+  const tx = x - Math.cos(angle) * back, ty = y - Math.sin(angle) * back;
+  const trailer = createAI(world, tx, ty, angle, color, 'trailer', T);
+  trailer.cab = cab;
+  cab.trailer = trailer;
+  const hx = x - Math.cos(angle) * (spec.length / 2 + gap / 2);
+  const hy = y - Math.sin(angle) * (spec.length / 2 + gap / 2);
+  world.createJoint(new pl.RevoluteJoint({
+    enableLimit: true, lowerAngle: -spec.hingeLimit, upperAngle: spec.hingeLimit, collideConnected: false,
+  }, cab.body, trailer.body, pl.Vec2(hx, hy)));
+  return [cab, trailer];
+}
+
+export function createAI(world, x, y, angle, color, type = 'car', spec = vehicleSpec(type)) {
+  const car = createCar(world, { x, y, angle, kind: 'ai', color, tune: spec, length: spec.length, width: spec.width });
+  car.type = type;
+  car.spec = spec;
+  car.counts = spec.counts ?? 1;
   car.heading = angle;
   car.wanderTimer = rand(CONFIG.ai.wanderMinTime, CONFIG.ai.wanderMaxTime);
   car.entering = 1.0; // seconds of driving straight in after spawning
@@ -50,7 +86,7 @@ function seekChance(elapsed, rampTime) {
 }
 
 export function updateAI(car, dt, world, game) {
-  const A = CONFIG.ai;
+  const A = car.spec;
   const body = car.body;
   if (car.tag > 0) car.tag = Math.max(0, car.tag - dt);
   const pos = body.getPosition();
@@ -60,6 +96,11 @@ export function updateAI(car, dt, world, game) {
   // Junk doesn't drive; it's just heavy wreckage to push around.
   if (car.junk) {
     body.setLinearDamping(CONFIG.pileup.junkDamping * surf.damping);
+    return;
+  }
+  // Trailers and towed cars don't drive themselves.
+  if (car.type === 'trailer' || car.towed) {
+    body.setLinearDamping((car.towed ? 0.6 : A.linearDamping) * surf.damping);
     return;
   }
 
@@ -100,6 +141,14 @@ export function updateAI(car, dt, world, game) {
         car.heading = body.getAngle() + rand(-A.wanderMaxTurn, A.wanderMaxTurn);
       }
       car.wanderTimer = rand(A.wanderMinTime, A.wanderMaxTime);
+    }
+  }
+
+  // Police head straight for a nearby player.
+  if (car.type === 'police' && game && car.entering <= 0 && car.bounce <= 0) {
+    const pp = game.player.body.getPosition();
+    if (Math.hypot(pp.x - p.x, pp.y - p.y) < A.chaseRange) {
+      car.heading = Math.atan2(pp.y - p.y, pp.x - p.x);
     }
   }
 
