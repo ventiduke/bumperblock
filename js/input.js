@@ -31,7 +31,7 @@ export function createInput(canvas, boostButton) {
   boostButton.addEventListener('pointercancel', unpress);
   boostButton.addEventListener('pointerleave', unpress);
 
-  const STEER_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'];
+  const STEER_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight', 'KeyS', 'ArrowDown'];
   window.addEventListener('keydown', (e) => {
     if (STEER_KEYS.includes(e.code)) {
       keys.add(e.code);
@@ -63,6 +63,17 @@ export function createInput(canvas, boostButton) {
         else right = true;
       }
       return (right ? 1 : 0) - (left ? 1 : 0);
+    },
+    // Both sides held (touch or keys), or S / Down: brake, then reverse.
+    brake() {
+      if (keys.has('KeyS') || keys.has('ArrowDown')) return true;
+      let left = keys.has('KeyA') || keys.has('ArrowLeft');
+      let right = keys.has('KeyD') || keys.has('ArrowRight');
+      for (const side of touches.values()) {
+        if (side < 0) left = true;
+        else right = true;
+      }
+      return left && right;
     },
     consumeBoost() {
       const b = boostQueued;

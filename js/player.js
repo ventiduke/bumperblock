@@ -1,13 +1,14 @@
 // Player car: auto-throttle, steering, boost, and stuck (boxed-in) detection.
 import { CONFIG } from '../config.js';
 import { createCar, applyGrip, applyDrive, forwardOf } from './physics.js';
+import { surfaceAt } from './terrain.js';
 
 const pl = window.planck;
 
 export function createPlayer(world) {
   const { width: W, height: H } = CONFIG.arena;
   const car = createCar(world, {
-    x: W / 2, y: H * 0.62, angle: -Math.PI / 2, kind: 'player', tune: CONFIG.player,
+    x: W * 0.12, y: H / 2, angle: 0, kind: 'player', tune: CONFIG.player,
   });
   car.boostCharge = 1;
   car.boostTime = 0;
@@ -26,10 +27,15 @@ export function tryBoost(p) {
   return true;
 }
 
-export function updatePlayer(p, dt, steer) {
+// steer: -1..1. brake: true while both sides (or S / Down) are held; brakes
+// hard, then reverses slowly once stopped.
+export function updatePlayer(p, dt, steer, brake = false) {
   const P = CONFIG.player;
   const B = CONFIG.boost;
   const body = p.body;
+  const pos = body.getPosition();
+  const surf = surfaceAt(pos.x, pos.y);
+  body.setLinearDamping(P.linearDamping * surf.damping);
 
   p.boostCharge = Math.min(1, p.boostCharge + dt / B.rechargeTime);
   const boosting = p.boostTime > 0;
@@ -41,11 +47,25 @@ export function updatePlayer(p, dt, steer) {
   const w = body.getAngularVelocity();
   body.setAngularVelocity(w + (targetW - w) * Math.min(1, P.steerResponse * dt));
 
-  applyGrip(body, P.lateralGrip);
+  applyGrip(body, P.lateralGrip * surf.grip);
+
+  const fwd = forwardOf(body);
+  if (brake && !boosting) {
+    const v = body.getLinearVelocity();
+    const fs = fwd.x * v.x + fwd.y * v.y;
+    const m = body.getMass();
+    let f = 0;
+    if (fs > 0.3) f = -P.brakeDecel * m;
+    else if (fs > -P.reverseSpeed * surf.speed) f = -P.reverseAccel * surf.accel * m;
+    if (f) body.applyForceToCenter(pl.Vec2(fwd.x * f, fwd.y * f), true);
+    p.reversing = fs < -0.3;
+    return;
+  }
+  p.reversing = false;
   applyDrive(
     body,
-    P.accel * (boosting ? B.accelMultiplier : 1),
-    P.topSpeed * (boosting ? B.speedMultiplier : 1),
+    P.accel * surf.accel * (boosting ? B.accelMultiplier : 1),
+    P.topSpeed * surf.speed * (boosting ? B.speedMultiplier : 1),
   );
 }
 
