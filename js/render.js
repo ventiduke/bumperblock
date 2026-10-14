@@ -208,13 +208,14 @@ export function render(r, game, debug) {
 
   // Cars.
   const now = game.elapsed;
+  const repairColor = CONFIG.features.damage ? game.repairColor : -1;
   const base = ctx.getTransform();
   for (const car of game.cars) {
     if (!visible(car.body.getPosition())) continue;
-    drawCar(ctx, car, L, CW, now);
+    drawCar(ctx, car, L, CW, now, repairColor);
     ctx.setTransform(base);
   }
-  if (game.player) drawPlayer(ctx, game.player, L, CW);
+  if (game.player) drawPlayer(ctx, game.player, L, CW, game);
   ctx.setTransform(base);
 
   // Particles.
@@ -234,7 +235,7 @@ export function render(r, game, debug) {
     ctx.globalAlpha = Math.min(1, t.life * 2);
     ctx.fillStyle = '#000';
     ctx.fillText(t.text, t.x + 0.05, t.y + 0.05);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = t.color;
     ctx.fillText(t.text, t.x, t.y);
   }
   ctx.globalAlpha = 1;
@@ -309,7 +310,7 @@ function place(ctx, body) {
   ctx.transform(c, s, -s, c, p.x, p.y);
 }
 
-function drawCar(ctx, car, L, CW, now) {
+function drawCar(ctx, car, L, CW, now, repairColor) {
   let tint = 0;
   if (car.groupId >= 0) {
     const t = Math.min(1, car.matchTimer / CONFIG.match.delay);
@@ -339,9 +340,15 @@ function drawCar(ctx, car, L, CW, now) {
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.fillRect(-L * 0.4, -CW * 0.36, L * 0.28, CW * 0.72);
   }
+  // Repair color: white cross on the roof.
+  if (car.color === repairColor) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-L * 0.28, -0.07, 0.5, 0.14);
+    ctx.fillRect(-L * 0.28 + 0.18, -0.25, 0.14, 0.5);
+  }
 }
 
-function drawPlayer(ctx, pc, L, CW) {
+function drawPlayer(ctx, pc, L, CW, game) {
   const p = pc.body.getPosition();
 
   // Stuck warning ring.
@@ -364,6 +371,24 @@ function drawPlayer(ctx, pc, L, CW) {
     ctx.fill();
   }
   carBody(ctx, L, CW, '#f4f5f7', 'rgba(15,18,26,0.75)');
+  if (CONFIG.features.damage) {
+    // Dents darken the body as health drops; red flash when hit or squeezed.
+    const wear = 1 - Math.max(0, game.health) / CONFIG.damage.maxHealth;
+    if (wear > 0.05) {
+      ctx.fillStyle = `rgba(40,30,30,${0.45 * wear})`;
+      ctx.beginPath();
+      ctx.arc(-L * 0.25, CW * 0.2, 0.3 * wear + 0.1, 0, Math.PI * 2);
+      ctx.arc(L * 0.35, -CW * 0.25, 0.25 * wear + 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (game.hurtFlash > 0) {
+      ctx.globalAlpha = Math.min(0.7, game.hurtFlash);
+      ctx.fillStyle = '#ff3b3b';
+      roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
   if (pc.reversing) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(-L / 2 - 0.08, -CW * 0.42, 0.12, 0.22);

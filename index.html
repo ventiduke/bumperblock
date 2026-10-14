@@ -18,22 +18,40 @@
       <div id="score">0</div>
       <div id="combo"></div>
     </div>
-    <div id="boost-bar"><div id="boost-fill"></div></div>
-    <button id="restart" type="button" aria-label="Restart">&#x21bb;</button>
+    <div id="goal"><div id="goal-label"></div><div id="goal-items"></div></div>
+    <div id="health">
+      <div id="repair" title="Repair color: explode these to heal"><span class="cross"></span></div>
+      <div id="health-bar"><div id="health-fill"></div></div>
+    </div>
+    <button id="restart" type="button" aria-label="Retry level">&#x21bb;</button>
   </div>
 
   <button id="boost" type="button" aria-label="Boost"><span>BOOST</span></button>
 
-  <div id="gameover" hidden>
+  <div id="gameover" class="overlay" hidden>
     <div class="panel">
-      <h1>Boxed in!</h1>
-      <p>Score</p>
+      <h1 id="go-title">Boxed in!</h1>
+      <p id="go-level"></p>
       <div id="final-score">0</div>
-      <button id="restart-big" type="button">Play again</button>
+      <div class="buttons">
+        <button id="restart-big" class="primary" type="button">Retry level</button>
+        <button id="restart-first" class="secondary" type="button">Level 1</button>
+      </div>
     </div>
   </div>
 
-  <div id="toast"><span class="swatch"></span><span>New color!</span></div>
+  <div id="levelup" class="overlay" hidden>
+    <div class="panel">
+      <h1 id="lu-title">Level clear!</h1>
+      <div id="lu-stars"></div>
+      <table id="lu-stats"></table>
+      <div class="buttons">
+        <button id="next-level" class="primary" type="button">Next level</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"><span class="swatch"></span><span class="text"></span></div>
 
   <div id="debug-text" hidden></div>
 

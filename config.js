@@ -2,6 +2,44 @@
 // Tweak here; nothing else needs to change.
 
 export const CONFIG = {
+  // Turn whole systems on/off to compare feel.
+  features: {
+    levels: true,           // level goals + results screen (off: endless, colorSchedule)
+    damage: true,           // health, impact/squeeze damage, repair color
+  },
+
+  // Each level: colors in play, the goal, spawn pace, and a par time (s) for
+  // stars. Goal is { total: N } (any colors) or { each: N } (N of every color).
+  // Past the last level, it repeats with bigger goals and faster spawns.
+  levels: [
+    { colors: 3, goal: { total: 15 }, par: 90, initialCars: 12, spawn: { startInterval: 1.8, minInterval: 0.8, rampTime: 90 } },
+    { colors: 4, goal: { each: 6 }, par: 120, initialCars: 14, spawn: { startInterval: 1.5, minInterval: 0.6, rampTime: 100 } },
+    { colors: 4, goal: { total: 35 }, par: 140, initialCars: 16, spawn: { startInterval: 1.3, minInterval: 0.5, rampTime: 100 } },
+    { colors: 5, goal: { each: 6 }, par: 170, initialCars: 16, spawn: { startInterval: 1.2, minInterval: 0.45, rampTime: 120 } },
+    { colors: 6, goal: { each: 6 }, par: 200, initialCars: 18, spawn: { startInterval: 1.1, minInterval: 0.4, rampTime: 120 } },
+  ],
+  levelScaling: { goalPerLevel: 2, spawnFactor: 0.92 }, // applied per level past the list
+  levelBonus: { perHealth: 2, perSecondUnderPar: 5 },
+
+  damage: {
+    maxHealth: 100,
+    // Impacts: damage = (impulse - threshold) * perImpulse * fault, where
+    // fault is the other car's share of the closing speed (so your own rams
+    // are free, getting slammed isn't), at least boostRamMult while boosting,
+    // and wallMult for walls/blocks.
+    impactThreshold: 14,    // walls and boost-rams
+    hitThreshold: 5,        // getting hit by another car (fault-scaled)
+    perImpulse: 0.6,
+    boostRamMult: 0.25,
+    wallMult: 0.25,
+    // Squeeze: while slow and touching 2+ things (at least one car).
+    squeezeSpeed: 1.5,
+    squeezePerSec: 6,
+    drainPerSec: 0.7,       // constant wear: ~140 s from full without repairs
+    // Repair: exploding the repair color heals; it rotates among active colors.
+    healPerCar: 8,
+    repairRotate: 25,       // seconds between repair color changes
+  },
   // Landscape arena, bigger than the screen; the camera follows the player.
   // Coordinates: x right, y down, origin top-left.
   arena: {
