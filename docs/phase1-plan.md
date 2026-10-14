@@ -137,3 +137,36 @@ docs/               design + this plan
 - **Spawning** happens just inside the walls, not through gates. It's checked
   for clearance so it never spawns overlapping.
 - **Starting state:** 6 AI cars, placed away from the player.
+
+## Findings from verification
+
+Things headless testing turned up, and the changes made:
+
+- **Sensor filtering.** Sensors detected nothing at first: the solid
+  fixture's mask has to include the sensor category too. That's fixed in
+  `physics.js`.
+- **Spawn clearance.** The broadphase uses fattened AABBs, which made every edge
+  spawn look blocked by the wall. `areaClear` now re-checks each fixture's real
+  AABB.
+- **Unfair box-ins.** Because the player always accelerates, a nose-on push
+  into a car turned the whole drive force into contact friction, which
+  cancelled the lerped steering. The player froze and lost with only one car
+  nearby. The fixes:
+  - `player.steerResponse` raised from 14 to 45, so angular velocity is set
+    almost directly.
+  - Car-car friction lowered to 0.15.
+  - A separate, low `wallFriction`.
+  - The player is no longer a Box2D `bullet`.
+
+  A pinned player can now pivot free in under a second. A player who doesn't
+  steer still loses at 2.0 s.
+- **Self-matching.** The AI forms matches on its own (about 13 in 90 s with the
+  player parked) because wandering cars bump and stun each other. Spawning was
+  ramped up a little to keep pressure on. `ai.stunFromAI` and the color count
+  are the knobs for this.
+- **Rendering.** Path fills beat pre-rendered sprites in headless Chromium,
+  which uses a software rasterizer, so cars are drawn as paths. With 40 cars,
+  the physics step costs ~0.3 ms (1.5 ms with 4× CPU throttle). Frame rate was
+  60 fps unthrottled and ~36 fps at 4× throttle on the software rasterizer. A
+  real phone's GPU-backed canvas should do better. `render.maxDpr` is the
+  fill-rate lever if it doesn't.
