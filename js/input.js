@@ -1,11 +1,13 @@
 // Steering from touch halves / keyboard, plus boost (button, swipe up, Space).
 import { CONFIG } from '../config.js';
 
-export function createInput(canvas, boostButton) {
+export function createInput(canvas, boostButton, abilityButton, cycleButton) {
   const touches = new Map(); // pointerId -> -1 | 1
   const swipes = new Map(); // pointerId -> { y, t, fired }
   const keys = new Set();
   let boostQueued = false;
+  let abilityQueued = false;
+  let cycleQueued = false;
 
   const sideOf = (e) => (e.clientX < window.innerWidth / 2 ? -1 : 1);
 
@@ -45,6 +47,22 @@ export function createInput(canvas, boostButton) {
   boostButton.addEventListener('pointercancel', unpress);
   boostButton.addEventListener('pointerleave', unpress);
 
+  // Ability button + swap button (same no-steer handling as boost).
+  const tapButton = (btn, fn) => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fn();
+      btn.classList.add('pressed');
+    });
+    const up = () => btn.classList.remove('pressed');
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('pointerleave', up);
+  };
+  tapButton(abilityButton, () => { abilityQueued = true; });
+  tapButton(cycleButton, () => { cycleQueued = true; });
+
   const STEER_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight', 'KeyS', 'ArrowDown'];
   window.addEventListener('keydown', (e) => {
     if (STEER_KEYS.includes(e.code)) {
@@ -53,6 +71,10 @@ export function createInput(canvas, boostButton) {
     } else if (e.code === 'Space') {
       if (!e.repeat) boostQueued = true;
       e.preventDefault();
+    } else if (e.code === 'KeyE' && !e.repeat) {
+      abilityQueued = true;
+    } else if (e.code === 'KeyQ' && !e.repeat) {
+      cycleQueued = true;
     }
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
@@ -94,8 +116,20 @@ export function createInput(canvas, boostButton) {
       boostQueued = false;
       return b;
     },
+    consumeAbility() {
+      const a = abilityQueued;
+      abilityQueued = false;
+      return a;
+    },
+    consumeCycle() {
+      const c = cycleQueued;
+      cycleQueued = false;
+      return c;
+    },
     reset() {
       boostQueued = false;
+      abilityQueued = false;
+      cycleQueued = false;
     },
   };
 }
