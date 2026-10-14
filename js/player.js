@@ -8,7 +8,7 @@ const pl = window.planck;
 export function createPlayer(world) {
   const { width: W, height: H } = CONFIG.arena;
   const car = createCar(world, {
-    x: W * 0.12, y: H / 2, angle: 0, kind: 'player', tune: CONFIG.player,
+    x: W * 0.2, y: H / 2, angle: 0, kind: 'player', tune: CONFIG.player,
   });
   car.boostCharge = 1;
   car.boostTime = 0;

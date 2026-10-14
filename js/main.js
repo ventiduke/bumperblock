@@ -4,10 +4,10 @@ import { createWorld, areaClear } from './physics.js';
 import { createTerrain } from './terrain.js';
 import { createPlayer, updatePlayer, updateStuck, tryBoost } from './player.js';
 import { createAI, updateAI, stunAI } from './ai.js';
-import { createSpawner, updateSpawner, spawnInterval } from './spawner.js';
+import { createSpawner, updateSpawner, spawnInterval, colorCount } from './spawner.js';
 import { updateMatches, scoreFor } from './match.js';
 import { createEffects, burst, floatText, addShake, updateEffects } from './effects.js';
-import { createRenderer, render } from './render.js';
+import { createRenderer, render, updateCamera } from './render.js';
 import { createInput } from './input.js';
 import { createHUD } from './hud.js';
 
@@ -22,6 +22,10 @@ const input = createInput(canvas, hud.el.boostBtn);
 
 let game = null;
 
+function emptyMatchInfo() {
+  return { links: [], playerLinks: [], groups: [], primed: [], ready: [] };
+}
+
 function newGame() {
   const world = createWorld();
   const g = {
@@ -35,7 +39,9 @@ function newGame() {
     comboTimer: 0,
     elapsed: 0,
     over: false,
-    matchInfo: { links: [], groups: [], primed: [], ready: [] },
+    matchInfo: emptyMatchInfo(),
+    colors: colorCount(0),
+    camera: { x: 0, y: 0 },
   };
   createTerrain(world);
   g.player = createPlayer(world);
@@ -49,7 +55,7 @@ function newGame() {
     const y = 1.5 + Math.random() * (H - 3);
     if (Math.hypot(x - pp.x, y - pp.y) < 4.5) continue;
     if (!areaClear(world, x, y, 1.6)) continue;
-    g.cars.push(createAI(world, x, y, Math.random() * Math.PI * 2, Math.floor(Math.random() * CONFIG.colors.length)));
+    g.cars.push(createAI(world, x, y, Math.random() * Math.PI * 2, Math.floor(Math.random() * g.colors)));
   }
   return g;
 }
@@ -154,7 +160,7 @@ function step(g, dt) {
   if (input.consumeBoost()) tryBoost(p);
   updatePlayer(p, dt, input.steer(), input.brake());
   for (const car of g.cars) {
-    updateAI(car, dt, g.world);
+    updateAI(car, dt, g.world, g);
     if (car.flash > 0) car.flash = Math.max(0, car.flash - dt * 4);
   }
 
@@ -164,9 +170,14 @@ function step(g, dt) {
 
   g.matchInfo = updateMatches(g, dt);
   for (const group of g.matchInfo.ready) explode(g, group);
-  if (g.matchInfo.ready.length) g.matchInfo = { links: [], groups: [], primed: [], ready: [] };
+  if (g.matchInfo.ready.length) g.matchInfo = emptyMatchInfo();
 
   updateSpawner(g.spawner, g, dt);
+  const colors = colorCount(g.elapsed);
+  if (colors > g.colors) {
+    g.colors = colors;
+    hud.announceColor(CONFIG.colors[colors - 1]);
+  }
 
   if (g.comboTimer > 0) {
     g.comboTimer -= dt;
@@ -185,6 +196,7 @@ function step(g, dt) {
 
 function restart() {
   game = newGame();
+  updateCamera(renderer, game.camera, game.player, 0, true);
   input.reset();
   hud.hideGameOver();
   accumulator = 0;
@@ -235,6 +247,7 @@ function frame(now) {
   }
   if (steps === CONFIG.physics.maxSubSteps) accumulator = 0;
 
+  updateCamera(renderer, game.camera, game.player, elapsed);
   render(renderer, game, DEBUG);
   hud.update(game);
 
@@ -270,4 +283,5 @@ window.bumper = {
 };
 
 game = newGame();
+updateCamera(renderer, game.camera, game.player, 0, true);
 requestAnimationFrame(frame);
