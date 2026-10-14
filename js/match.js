@@ -48,7 +48,7 @@ export function updateMatches(game, dt) {
     const key = a.id < b.id ? a.id * 100000 + b.id : b.id * 100000 + a.id;
     if (seen.has(key)) continue;
     seen.add(key);
-    const same = a.color === b.color;
+    const same = a.color === b.color && a.color >= 0; // junk (-1) never matches
     links.push([a, b, same]);
     if (same) {
       const ra = find(parent, index.get(a));
@@ -63,7 +63,7 @@ export function updateMatches(game, dt) {
     const firstOfColor = new Map();
     for (const car of nearPlayer) {
       const i = index.get(car);
-      if (i === undefined) continue;
+      if (i === undefined || car.color < 0) continue;
       const first = firstOfColor.get(car.color);
       if (first === undefined) firstOfColor.set(car.color, i);
       else {

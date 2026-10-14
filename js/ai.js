@@ -16,6 +16,9 @@ export function createAI(world, x, y, angle, color) {
   car.tag = 0;          // >0 while the player's influence can set off a match
   car.lookTimer = rand(0, 0.25);
   car.bounce = 0;
+  car.rust = 0;          // seconds spent in a pile-up
+  car.rustAt = CONFIG.pileup.rustTime + rand(-1, 1) * CONFIG.pileup.rustJitter;
+  car.junk = false;
   return car;
 }
 
@@ -53,6 +56,12 @@ export function updateAI(car, dt, world, game) {
   const pos = body.getPosition();
   const surf = surfaceAt(pos.x, pos.y);
   applyGrip(body, A.lateralGrip * surf.grip);
+
+  // Junk doesn't drive; it's just heavy wreckage to push around.
+  if (car.junk) {
+    body.setLinearDamping(CONFIG.pileup.junkDamping * surf.damping);
+    return;
+  }
 
   if (car.stun > 0) {
     car.stun -= dt;
