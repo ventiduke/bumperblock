@@ -36,13 +36,29 @@ Minimal by design:
   screen. On desktop, A/D or the arrow keys.
 - **Brake / reverse.** Hold both sides at once (or S / Down on desktop): the
   car brakes hard, then slowly reverses. This is for lining up shots.
-- **One or two ability buttons.** The first is **Boost**: a short speed burst
-  on a recharging meter. Future abilities might include a spin or a
-  shockwave.
+- **Boost** (right edge, or a quick upward swipe): a short speed burst on a
+  recharging meter.
+- **Ability slot** (left edge): one equipped ability with its own recharge.
+  The small swap button cycles between them. These are prototype candidates
+  for future unlocks:
+  - **Chameleon:** for a few seconds your car counts as one car toward the 3,
+    so a pair plus you explodes.
+  - **Phase:** briefly pass through cars and blocks (not the arena walls).
+    It's an escape from being boxed in.
+  - **Tow:** rope the nearest car and drag it around. The towed car counts as
+    part of your chain, so you can deliver it into a group.
 
 ## AI cars
 
-- Each car has properties. For now that's just **color** (3–4 colors).
+- Each vehicle has a **color** and a **type**. Types play differently:
+  - **Car:** the baseline.
+  - **Motorcycle:** small, light and fast; it slips through gaps.
+  - **Bus:** long, heavy and slow, and counts as 2. It makes a great bridge.
+  - **Semi:** a cab plus a trailer on a hinge that jackknifes, counting 2.
+  - **Police:** chases you when you're nearby.
+- A match containing three different types is a **convoy**, worth ×1.5
+  points.
+- Later levels mix in the bigger and more dangerous types.
 - Most cars wander aimlessly at modest speed. As the level goes on, the crowd
   drifts increasingly toward the player. That makes being boxed in a real
   threat, and aggressive play riskier.
@@ -141,7 +157,11 @@ Arenas have features that change how you drive and where cars pile up:
 
 ## Future ideas (not in Phase 1)
 
-- Targeting / chaser AI, wildcard cars.
+- Wildcard cars.
+- Run upgrades: pick 1 of 3 after each level. Later this becomes a skill tree
+  with exclusive branches, then prestige.
+- More abilities: magnet, horn or shockwave, paint bomb, oil slick, junk
+  shredder.
 - Heavy cars that need a bigger group (e.g. 4+) or two hits to tag.
 - Additional abilities (shockwave, brake-spin), power-ups dropped by
   explosions.

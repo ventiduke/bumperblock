@@ -298,3 +298,56 @@ Feedback from the fourth playtest:
 
 So waiting it out turns the arena into a junkyard within about two minutes.
 If that's too harsh, raise `pileup.size` or `rustTime`.
+
+## Round 5: ability slot and vehicle types
+
+This round followed up on the "what next?" discussion. The plan was to
+prototype abilities and vehicle variety before building any meta-progression,
+since those are what a skill tree would eventually unlock.
+
+- **Abilities** (`js/abilities.js`, `config.abilities`):
+  - **Layout and controls:** a left-edge button mirrors boost. The ⇄ button
+    (or Q) cycles the equipped ability, and E uses it. `?ability=phase`
+    selects one from the URL. The choice persists across levels and retries,
+    and you can't swap while an ability is active.
+  - **Chameleon (5 s, 14 s recharge):** `match.js` adds 1 to the size of any
+    group the player touches. The car shimmers through the active colors.
+  - **Phase (1.5 s, 12 s recharge):** the player's solid fixture masks
+    everything except `CAT_WALL` (arena walls), and its sensor masks
+    everything, so there's no matching while phased. Terrain blocks moved to
+    a new `CAT_BLOCK` category so phase passes through them. When the timer
+    ends while overlapping something (`testOverlap`), phase extends up to
+    `maxExtend`. The car is drawn ghostly.
+  - **Tow (6 s recharge after the drop, 10 s max):** a `RopeJoint` from the
+    player's rear bumper to the nearer end of the closest car within 3.5 m.
+    The towed car doesn't drive and counts as touching the player for chain
+    matching, which is how you deliver it into a group. Press again to drop.
+    The tow also ends if the car explodes or rusts.
+- **Vehicle types** (`config.vehicles`, `vehicleMix`, per-level `types`):
+  - Each type overrides `CONFIG.ai` for size, density, speed, accel, turn
+    rate and grip, and sets `counts` (its weight toward match size and the
+    level order).
+  - **Semi:** a cab plus a trailer joined by a `RevoluteJoint` (±1.3 rad).
+    Matching always unions the cab and trailer, and each counts 1.
+  - **Police:** heads straight at the player within `chaseRange`.
+  - **Mix:** level 1 has cars, motorcycles and buses. Level 2 adds semis.
+    Level 3 onward uses the full mix, police included.
+  - **Spawning:** long vehicles spawn further from the edge, with clearance
+    scaled to their length.
+- **Convoy:** a group with 3 or more distinct types (a trailer counts as a
+  semi) scores ×1.5, with a "CONVOY!" pop-up.
+- **Verification:** 24 new checks cover:
+  - swapping and persistence of the equipped ability
+  - chameleon making a pair explode
+  - recharge timing
+  - phasing through a wall of cars, arena walls staying solid, and the
+    overlap extension
+  - tow hook, drag, drop, and delivering a car into a pair
+  - each level's vehicle mix
+  - bus and semi weights
+  - the semi staying hitched
+  - per-type speeds
+  - police chasing
+  - the convoy bonus
+
+  All 47 earlier checks still pass.
