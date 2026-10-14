@@ -10,9 +10,10 @@ function find(parent, i) {
   return i;
 }
 
-// Returns { links, groups, ready }:
+// Returns { links, groups, primed, ready }:
 //   links  - [carA, carB, sameColor] for every touching AI pair (for debug/visuals)
-//   groups - arrays of cars in qualifying (>= minGroup) groups
+//   groups - armed qualifying (>= minGroup) groups, counting down
+//   primed - qualifying groups waiting for the player (see match.mode)
 //   ready  - subset of groups whose countdown has finished
 export function updateMatches(game, dt) {
   const M = CONFIG.match;
@@ -26,6 +27,7 @@ export function updateMatches(game, dt) {
 
   const links = [];
   const seen = new Set();
+  const nearPlayer = new Set();
   for (let c = game.world.getContactList(); c; c = c.getNext()) {
     if (!c.isTouching()) continue;
     const fa = c.getFixtureA();
@@ -37,7 +39,11 @@ export function updateMatches(game, dt) {
     if (!da || !db || !da.car || !db.car) continue;
     const a = da.car;
     const b = db.car;
-    if (a === b || a.kind !== 'ai' || b.kind !== 'ai' || a.dead || b.dead) continue;
+    if (a === b || a.dead || b.dead) continue;
+    if (a.kind === 'player' || b.kind === 'player') {
+      nearPlayer.add(a.kind === 'player' ? b : a);
+      continue;
+    }
     const key = a.id < b.id ? a.id * 100000 + b.id : b.id * 100000 + a.id;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -59,14 +65,19 @@ export function updateMatches(game, dt) {
   }
 
   const groups = [];
+  const primed = [];
   const ready = [];
   let gid = 0;
   for (const list of comps.values()) {
-    if (list.length < M.minGroup) {
+    const qualifies = list.length >= M.minGroup;
+    const armed = qualifies && isArmed(list, M.mode, nearPlayer);
+    for (const car of list) car.primed = qualifies && !armed;
+    if (!armed) {
       for (const car of list) {
         car.matchTimer = 0;
         car.groupId = -1;
       }
+      if (qualifies) primed.push(list);
       continue;
     }
     let oldest = 0;
@@ -80,7 +91,17 @@ export function updateMatches(game, dt) {
     gid++;
   }
 
-  return { links, groups, ready };
+  return { links, groups, primed, ready };
+}
+
+// A countdown, once started, keeps going even if the trigger lapses.
+function isArmed(list, mode, nearPlayer) {
+  if (mode === 'any') return true;
+  for (const car of list) {
+    if (car.matchTimer > 0) return true;
+    if (mode === 'touch' ? nearPlayer.has(car) : car.tag > 0) return true;
+  }
+  return false;
 }
 
 export function scoreFor(n, combo) {
