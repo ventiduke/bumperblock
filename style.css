@@ -64,6 +64,8 @@ button {
 
 #boost-bar {
   flex: 1;
+  max-width: 360px;
+  margin: 0 auto;
   height: 10px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.12);

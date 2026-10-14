@@ -14,7 +14,8 @@ export const CONFIG = {
     positionIterations: 3,
     maxSubSteps: 4,
     restitution: 0.12,      // bounciness of car-car hits (low = thuddy, not floaty)
-    friction: 0.35,         // surface friction between bodies when they scrape
+    friction: 0.15,         // car-car scrape friction (low = cars glance off, easier to pivot free)
+    wallFriction: 0.05,     // low so cars slide along walls instead of sticking nose-first
   },
 
   car: {
@@ -27,7 +28,7 @@ export const CONFIG = {
     topSpeed: 8.5,          // m/s
     accel: 22,              // m/s^2 drive acceleration below top speed
     turnRate: 3.6,          // rad/s at full steer
-    steerResponse: 14,      // how fast angular velocity reaches target (1/s)
+    steerResponse: 45,      // how fast angular velocity reaches target (1/s); high = crisp, and lets you pivot out of pins
     minTurnFactor: 0.45,    // fraction of turnRate available at zero speed
     fullTurnSpeed: 3,       // speed (m/s) at which full turn rate is available
     lateralGrip: 1.0,       // max sideways-cancel impulse per step, as fraction of mass*m/s
@@ -59,13 +60,14 @@ export const CONFIG = {
     stunTime: 1.6,          // seconds AI stops driving after a hard hit
     stunImpulse: 1.2,       // normal impulse (N*s) that counts as a hard hit
     stunDamping: 3.5,       // linear damping while stunned
+    stunFromAI: true,       // AI-AI and AI-wall hits also stun (more natural clumping)
   },
 
   spawn: {
     initialCars: 6,
-    startInterval: 2.6,     // seconds between spawns at t=0
-    minInterval: 0.7,       // fastest spawn interval
-    rampTime: 150,          // seconds to go from start to min interval
+    startInterval: 2.2,     // seconds between spawns at t=0
+    minInterval: 0.6,       // fastest spawn interval
+    rampTime: 120,          // seconds to go from start to min interval
     maxCars: 40,
     edgeInset: 1.4,         // spawn this far inside the wall
     clearance: 1.3,         // half-size of the box that must be empty to spawn
@@ -102,5 +104,6 @@ export const CONFIG = {
   render: {
     maxDpr: 2,              // cap device pixel ratio for fill-rate on phones
     hudTopPx: 52,           // reserved space for the top HUD bar
+    boostReservePx: 104,    // space kept under the arena for the boost button, if it fits
   },
 };
