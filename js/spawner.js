@@ -5,8 +5,8 @@ import { createAI } from './ai.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
-export function spawnInterval(elapsed) {
-  const S = CONFIG.spawn;
+// Spawn interval at time `elapsed` for a pace { startInterval, minInterval, rampTime }.
+export function spawnInterval(elapsed, S = CONFIG.spawn) {
   const t = Math.min(1, elapsed / S.rampTime);
   return S.startInterval + (S.minInterval - S.startInterval) * t;
 }
@@ -38,7 +38,7 @@ function edgePoint() {
 
 // Try a few edge points; returns the new car or null if none were clear.
 export function trySpawn(game, avoid = null, avoidDist = 0) {
-  const n = colorCount(game.elapsed);
+  const n = game.colors;
   for (let i = 0; i < 6; i++) {
     const p = edgePoint();
     if (avoid && Math.hypot(p.x - avoid.x, p.y - avoid.y) < avoidDist) continue;
@@ -54,5 +54,5 @@ export function updateSpawner(sp, game, dt) {
   if (game.cars.length >= CONFIG.spawn.maxCars) return;
   sp.timer += dt;
   // Keep spawns out of the player's immediate surroundings (they appear on screen).
-  if (sp.timer >= spawnInterval(game.elapsed) && trySpawn(game, game.player.body.getPosition(), 6)) sp.timer = 0;
+  if (sp.timer >= spawnInterval(game.elapsed, game.level.spawn) && trySpawn(game, game.player.body.getPosition(), 6)) sp.timer = 0;
 }

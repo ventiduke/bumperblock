@@ -4,12 +4,14 @@ import { createWorld, areaClear } from './physics.js';
 import { createTerrain } from './terrain.js';
 import { createPlayer, updatePlayer, updateStuck, tryBoost } from './player.js';
 import { createAI, updateAI, stunAI } from './ai.js';
-import { createSpawner, updateSpawner, spawnInterval, colorCount } from './spawner.js';
+import { createSpawner, updateSpawner, spawnInterval } from './spawner.js';
 import { updateMatches, scoreFor } from './match.js';
 import { createEffects, burst, floatText, addShake, updateEffects } from './effects.js';
 import { createRenderer, render, updateCamera } from './render.js';
 import { createInput } from './input.js';
 import { createHUD } from './hud.js';
+import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
+import { initDamage, impactDamage, updateDamage, repairFrom } from './damage.js';
 
 const pl = window.planck;
 const params = new URLSearchParams(location.search);
@@ -26,31 +28,41 @@ function emptyMatchInfo() {
   return { links: [], playerLinks: [], groups: [], primed: [], ready: [] };
 }
 
-function newGame() {
+// Start level `levelIndex` (0-based), carrying `startScore` over.
+function newGame(levelIndex = 0, startScore = 0) {
   const world = createWorld();
+  const level = CONFIG.features.levels ? getLevel(levelIndex) : endlessLevel();
   const g = {
     world,
+    level,
+    levelIndex,
+    levelStartScore: startScore,
     player: null,
     cars: [],
     spawner: createSpawner(),
     fx: createEffects(),
-    score: 0,
+    score: startScore,
     combo: 0,
     comboTimer: 0,
     elapsed: 0,
     over: false,
+    complete: false,
+    cleared: { total: 0, byColor: [] },
     matchInfo: emptyMatchInfo(),
-    colors: colorCount(0),
+    colors: activeColors(level, 0),
     camera: { x: 0, y: 0 },
   };
+  initDamage(g);
+  g.onRepairChange = (c) => hud.announce('Repair color', CONFIG.colors[c]);
   createTerrain(world);
   g.player = createPlayer(world);
+  world.on('pre-solve', (contact) => recordApproach(contact));
   world.on('post-solve', (contact, impulse) => onImpact(g, contact, impulse));
 
   const { width: W, height: H } = CONFIG.arena;
   const pp = g.player.body.getPosition();
   let tries = 0;
-  while (g.cars.length < CONFIG.spawn.initialCars && tries++ < 200) {
+  while (g.cars.length < level.initialCars && tries++ < 300) {
     const x = 1.5 + Math.random() * (W - 3);
     const y = 1.5 + Math.random() * (H - 3);
     if (Math.hypot(x - pp.x, y - pp.y) < 4.5) continue;
@@ -58,6 +70,24 @@ function newGame() {
     g.cars.push(createAI(world, x, y, Math.random() * Math.PI * 2, Math.floor(Math.random() * g.colors)));
   }
   return g;
+}
+
+// Before the solver runs, note how fast the player and the other body were
+// closing on each other, so damage can tell a ram from getting rammed.
+function recordApproach(contact) {
+  const ba = contact.getFixtureA().getBody();
+  const bb = contact.getFixtureB().getBody();
+  const ka = ba.getUserData()?.kind, kb = bb.getUserData()?.kind;
+  if (ka !== 'player' && kb !== 'player') return;
+  const wm = contact.getWorldManifold(null);
+  if (!wm) return;
+  const n = wm.normal; // points from A to B
+  const va = ba.getLinearVelocity(), vb = bb.getLinearVelocity();
+  const aToward = Math.max(0, va.x * n.x + va.y * n.y);
+  const bToward = Math.max(0, -(vb.x * n.x + vb.y * n.y));
+  contact.approach = ka === 'player'
+    ? { player: aToward, other: bToward }
+    : { player: bToward, other: aToward };
 }
 
 function onImpact(g, contact, impulse) {
@@ -86,6 +116,8 @@ function onImpact(g, contact, impulse) {
     }
   }
   if (maxImp < CONFIG.ai.stunImpulse) return;
+
+  if (playerInvolved) impactDamage(g, maxImp, !(A && B), contact.approach);
 
   // Hard hits stun AI so they settle where they land (optionally AI-AI/wall hits too).
   if (playerInvolved || CONFIG.ai.stunFromAI) {
@@ -128,6 +160,11 @@ function explode(g, group) {
   }
   g.cars = g.cars.filter((c) => !c.dead);
 
+  const color = group[0].color;
+  g.cleared.total += group.length;
+  g.cleared.byColor[color] = (g.cleared.byColor[color] || 0) + group.length;
+  repairFrom(g, color, group.length, cx, cy);
+
   g.combo = g.comboTimer > 0 ? g.combo + 1 : 1;
   g.comboTimer = M.comboWindow;
   const pts = scoreFor(group.length, g.combo);
@@ -151,8 +188,25 @@ function explode(g, group) {
   shove(g.player);
 }
 
+function gameOver(g, title) {
+  g.over = true;
+  const p = g.player.body.getPosition();
+  burst(g.fx, p.x, p.y, '#ffffff', 30, 8, 0.8, 0.25);
+  addShake(g.fx, 0.3);
+  hud.showGameOver(title, g.score, g.levelIndex);
+}
+
+function completeLevel(g) {
+  g.complete = true;
+  const time = g.elapsed;
+  const bonus = levelBonus(g.level, time, CONFIG.features.damage ? g.health : 0);
+  g.score += bonus;
+  const stars = starsFor(g.level, time);
+  hud.showLevelComplete({ level: g.levelIndex + 1, time, health: g.health, bonus, score: g.score, stars, damage: CONFIG.features.damage });
+}
+
 function step(g, dt) {
-  if (g.over) {
+  if (g.over || g.complete) {
     updateEffects(g.fx, dt);
     return;
   }
@@ -172,11 +226,17 @@ function step(g, dt) {
   for (const group of g.matchInfo.ready) explode(g, group);
   if (g.matchInfo.ready.length) g.matchInfo = emptyMatchInfo();
 
+  if (CONFIG.features.levels && goalMet(g.level, g.cleared)) {
+    completeLevel(g);
+    updateEffects(g.fx, dt);
+    return;
+  }
+
   updateSpawner(g.spawner, g, dt);
-  const colors = colorCount(g.elapsed);
+  const colors = activeColors(g.level, g.elapsed);
   if (colors > g.colors) {
     g.colors = colors;
-    hud.announceColor(CONFIG.colors[colors - 1]);
+    hud.announce('New color!', CONFIG.colors[colors - 1]);
   }
 
   if (g.comboTimer > 0) {
@@ -184,28 +244,36 @@ function step(g, dt) {
     if (g.comboTimer <= 0) g.combo = 0;
   }
 
-  if (updateStuck(p, dt)) {
-    g.over = true;
-    burst(g.fx, p.body.getPosition().x, p.body.getPosition().y, '#ffffff', 30, 8, 0.8, 0.25);
-    addShake(g.fx, 0.3);
-    hud.showGameOver(g.score);
-  }
+  if (updateDamage(g, dt)) gameOver(g, 'Wrecked!');
+  else if (updateStuck(p, dt)) gameOver(g, 'Boxed in!');
 
   updateEffects(g.fx, dt);
 }
 
-function restart() {
-  game = newGame();
+function startLevel(index, score) {
+  game = newGame(index, score);
   updateCamera(renderer, game.camera, game.player, 0, true);
   input.reset();
-  hud.hideGameOver();
+  hud.hidePanels();
   accumulator = 0;
+  if (CONFIG.features.levels) hud.announce(`Level ${index + 1}: ${goalText(game.level)}`);
 }
+
+// Retry the current level with the score it started with.
+function restart() {
+  startLevel(game ? game.levelIndex : 0, game ? game.levelStartScore : 0);
+}
+const nextLevel = () => startLevel(game.levelIndex + 1, game.score);
+const fromStart = () => startLevel(0, 0);
 
 document.getElementById('restart').addEventListener('click', restart);
 document.getElementById('restart-big').addEventListener('click', restart);
+document.getElementById('restart-first').addEventListener('click', fromStart);
+document.getElementById('next-level').addEventListener('click', nextLevel);
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyR' || (game.over && e.code === 'Enter')) restart();
+  if (e.code === 'KeyR') restart();
+  else if (e.code === 'Enter' && game.over) restart();
+  else if (e.code === 'Enter' && game.complete) nextLevel();
 });
 
 // Fixed-timestep loop.
@@ -257,7 +325,8 @@ function frame(now) {
     debugEl.textContent =
       `fps ${fps.toFixed(0)}\n` +
       `cars ${game.cars.length}  armed ${game.matchInfo.groups.length}  primed ${game.matchInfo.primed.length}\n` +
-      `spawn every ${spawnInterval(game.elapsed).toFixed(2)}s  t=${game.elapsed.toFixed(0)}s\n` +
+      `level ${game.levelIndex + 1}  spawn every ${spawnInterval(game.elapsed, game.level.spawn).toFixed(2)}s  t=${game.elapsed.toFixed(0)}s\n` +
+      `health ${game.health.toFixed(1)}${game.squeezed ? ' SQUEEZED' : ''}  repair c${game.repairColor} in ${game.repairTimer.toFixed(0)}s\n` +
       `speed ${pv.toFixed(2)}  stuck ${game.player.stuckTimer.toFixed(2)}\n` +
       `boost ${game.player.boostCharge.toFixed(2)}`;
   }
@@ -273,6 +342,8 @@ window.bumper = {
   get game() { return game; },
   CONFIG,
   restart,
+  startLevel,
+  nextLevel,
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },
   areaClear: (x, y, half) => areaClear(game.world, x, y, half),
   spawnAt(color, x, y, angle = 0) {
@@ -282,6 +353,5 @@ window.bumper = {
   },
 };
 
-game = newGame();
-updateCamera(renderer, game.camera, game.player, 0, true);
+startLevel(0, 0);
 requestAnimationFrame(frame);

@@ -40,9 +40,9 @@ function blockedAhead(car, world, dt) {
 }
 
 // Chance a wander decision steers toward the player at time `elapsed`.
-function seekChance(elapsed) {
+function seekChance(elapsed, rampTime) {
   const A = CONFIG.ai;
-  const t = Math.min(1, elapsed / CONFIG.spawn.rampTime);
+  const t = Math.min(1, elapsed / rampTime);
   return A.seekStart + (A.seekMax - A.seekStart) * t;
 }
 
@@ -84,7 +84,7 @@ export function updateAI(car, dt, world, game) {
       car.heading = Math.atan2(H / 2 - p.y, W / 2 - p.x) + car.wallBias;
       car.wanderTimer = rand(A.wanderMinTime, A.wanderMaxTime);
     } else if ((car.wanderTimer -= dt) <= 0) {
-      if (game && Math.random() < seekChance(game.elapsed)) {
+      if (game && Math.random() < seekChance(game.elapsed, game.level.spawn.rampTime)) {
         const pp = game.player.body.getPosition();
         car.heading = Math.atan2(pp.y - p.y, pp.x - p.x) + rand(-0.4, 0.4);
       } else {
