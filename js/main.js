@@ -1,7 +1,7 @@
 // Bootstrap, fixed-timestep loop, game state, explosions, restart.
 import { CONFIG } from '../config.js';
 import { createWorld, areaClear } from './physics.js';
-import { createTerrain } from './terrain.js';
+import { createTerrain, updateSlicks, clearSlicks } from './terrain.js';
 import { createPlayer, updatePlayer, updateStuck, tryBoost } from './player.js';
 import { createVehicle, vehicleLength, updateAI, stunAI } from './ai.js';
 import { createSpawner, updateSpawner, spawnInterval, pickType } from './spawner.js';
@@ -11,7 +11,9 @@ import { createRenderer, render, updateCamera } from './render.js';
 import { createInput } from './input.js';
 import { createHUD } from './hud.js';
 import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, levelBonus } from './levels.js';
-import { initDamage, impactDamage, updateDamage, repairFrom, copRam } from './damage.js';
+import { initDamage, impactDamage, updateDamage, repairFrom, copRam, heal } from './damage.js';
+import { newRun, computeMods, unlockedAbilities, drawCards, pickCard, cardById } from './upgrades.js';
+import { abilityLabel } from './abilities.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
 import { initAbilities, useAbility, cycleAbility, selectAbility, updateAbilities } from './abilities.js';
 
@@ -28,6 +30,8 @@ let game = null;
 // The equipped ability carries across levels and retries.
 let equipped = new URLSearchParams(location.search).get('ability');
 if (!CONFIG.abilities.list.includes(equipped)) equipped = null;
+// The current run's upgrade picks; reset when starting over from level 1.
+let run = newRun();
 
 function emptyMatchInfo() {
   return { links: [], playerLinks: [], groups: [], primed: [], ready: [] };
@@ -56,12 +60,22 @@ function newGame(levelIndex = 0, startScore = 0) {
     matchInfo: emptyMatchInfo(),
     colors: activeColors(level, 0),
     camera: { x: 0, y: 0 },
+    run,
+    mods: computeMods(run),
+    unlocked: unlockedAbilities(run),
+    stats: { matches: 0, cleared: 0, biggest: 0, convoys: 0, junk: 0, abilities: {}, copRams: 0 },
   };
+  clearSlicks();
   initDamage(g);
-  g.onCopRam = (car) => copRam(g, car);
+  g.onCopRam = (car) => {
+    g.stats.copRams++;
+    copRam(g, car);
+  };
   g.onRepairChange = (c) => (c >= 0 ? hud.announce('Repair color', CONFIG.colors[c]) : hud.announce('No repairs for now'));
   createTerrain(world);
   g.player = createPlayer(world);
+  g.player.mods = g.mods;
+  if (!g.unlocked.includes(equipped)) equipped = g.unlocked[0];
   initAbilities(g.player, equipped);
   world.on('pre-solve', (contact) => recordApproach(contact));
   world.on('post-solve', (contact, impulse) => onImpact(g, contact, impulse));
@@ -183,10 +197,11 @@ function explode(g, group) {
   }
 
   const color = group[0].color;
-  const weight = groupWeight(group);
+  const weight = groupWeight(group, g.mods);
   g.cleared.total += weight;
   g.cleared.byColor[color] = (g.cleared.byColor[color] || 0) + weight;
   repairFrom(g, color, weight, cx, cy);
+  if (weight >= 4 && g.mods.bigHeal) heal(g, g.mods.bigHeal, cx, cy - 2); // Feeding frenzy
 
   g.combo = g.comboTimer > 0 ? g.combo + 1 : 1;
   g.comboTimer = M.comboWindow;
@@ -196,16 +211,23 @@ function explode(g, group) {
   floatText(g.fx, cx, cy, g.combo > 1 ? `+${pts} x${g.combo}` : `+${pts}`);
   if (convoy) floatText(g.fx, cx, cy - 1, 'CONVOY!', '#ffd23f');
   if (junk) floatText(g.fx, cx, cy + 1, `${junk} junk cleared`, '#c9ced8');
+  const st = g.stats;
+  st.matches++;
+  st.cleared += weight;
+  st.biggest = Math.max(st.biggest, weight);
+  if (convoy) st.convoys++;
+  st.junk += junk;
   addShake(g.fx, 0.12 + 0.03 * group.length);
 
   // Shockwave: shove and stun everything nearby.
+  const blastR = M.blastRadius * g.mods.blastRadius;
   const shove = (car) => {
     const b = car.body;
     const p = b.getPosition();
     const dx = p.x - cx, dy = p.y - cy;
     const d = Math.hypot(dx, dy);
-    if (d >= M.blastRadius || d < 1e-3) return;
-    const k = M.blastImpulse * (1 - d / M.blastRadius) * b.getMass() / d;
+    if (d >= blastR || d < 1e-3) return;
+    const k = M.blastImpulse * (1 - d / blastR) * b.getMass() / d;
     b.applyLinearImpulse(pl.Vec2(dx * k, dy * k), b.getWorldCenter(), true);
     stunAI(car);
     if (car.kind === 'ai') car.tag = M.tagTime; // blasts can chain
@@ -219,7 +241,27 @@ function gameOver(g, title) {
   const p = g.player.body.getPosition();
   burst(g.fx, p.x, p.y, '#ffffff', 30, 8, 0.8, 0.25);
   addShake(g.fx, 0.3);
-  hud.showGameOver(title, g.score, g.levelIndex);
+  hud.showGameOver(title, g.score, g.levelIndex, runSummary(g));
+}
+
+// Rows for the results / game-over screens (what happened this level).
+function runSummary(g) {
+  const st = g.stats;
+  const rows = [
+    ['Matches', `${st.matches}  (${st.cleared} cars, best ${st.biggest})`],
+  ];
+  if (st.convoys) rows.push(['Convoys', st.convoys]);
+  if (st.junk) rows.push(['Junk cleared', st.junk]);
+  const ab = Object.entries(st.abilities).map(([a, n]) => `${abilityLabel(a).toLowerCase()} ${n}`).join(' · ');
+  rows.push(['Abilities used', ab || 'none']);
+  if (CONFIG.features.damage) {
+    const total = Object.values(g.damageBy).reduce((a, b) => a + b, 0);
+    const names = { wall: 'walls', boost: 'boost-rams', hit: 'hits', cop: 'cops', squeeze: 'squeezed', drain: 'wear' };
+    const top = Object.entries(g.damageBy).filter(([, v]) => v >= 0.5).sort((a, b) => b[1] - a[1]).slice(0, 3)
+      .map(([k, v]) => `${names[k] || k} ${Math.round((100 * v) / total)}%`).join(' · ');
+    rows.push(['Damage taken', total >= 0.5 ? `${Math.round(total)} HP: ${top}` : 'none']);
+  }
+  return rows;
 }
 
 function completeLevel(g) {
@@ -228,7 +270,11 @@ function completeLevel(g) {
   const bonus = levelBonus(g.level, time, CONFIG.features.damage ? g.health : 0);
   g.score += bonus;
   const stars = starsFor(g.level, time);
-  hud.showLevelComplete({ level: g.levelIndex + 1, time, health: g.health, bonus, score: g.score, stars, damage: CONFIG.features.damage });
+  g.cards = CONFIG.features.upgrades ? drawCards(run, 3) : [];
+  hud.showLevelComplete({
+    level: g.levelIndex + 1, time, health: g.health, bonus, score: g.score, stars, damage: CONFIG.features.damage,
+    summary: runSummary(g), cards: g.cards, picks: run.picks.map((id) => cardById(id).name),
+  });
 }
 
 function step(g, dt) {
@@ -260,6 +306,7 @@ function step(g, dt) {
   for (const group of g.matchInfo.ready) explode(g, group);
   if (g.matchInfo.ready.length) g.matchInfo = emptyMatchInfo();
   g.pileups = CONFIG.features.pileups ? updatePileups(g, links, dt) : 0;
+  updateSlicks(dt);
 
   if (CONFIG.features.levels && goalMet(g.level, g.cleared)) {
     completeLevel(g);
@@ -299,7 +346,19 @@ function restart() {
   startLevel(game ? game.levelIndex : 0, game ? game.levelStartScore : 0);
 }
 const nextLevel = () => startLevel(game.levelIndex + 1, game.score);
-const fromStart = () => startLevel(0, 0);
+const fromStart = () => {
+  run = newRun();
+  startLevel(0, 0);
+};
+// Take an upgrade card from the results screen and go on to the next level.
+function chooseCard(i) {
+  const card = game.complete && game.cards?.[i];
+  if (!card) return;
+  pickCard(run, card.id);
+  if (card.kind === 'ability') equipped = card.id; // try the new toy right away
+  nextLevel();
+}
+hud.onPickCard = chooseCard;
 
 document.getElementById('restart').addEventListener('click', restart);
 document.getElementById('restart-big').addEventListener('click', restart);
@@ -308,7 +367,8 @@ document.getElementById('next-level').addEventListener('click', nextLevel);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyR') restart();
   else if (e.code === 'Enter' && game.over) restart();
-  else if (e.code === 'Enter' && game.complete) nextLevel();
+  else if (game.complete && game.cards?.length && /^(Digit|Numpad)[1-3]$/.test(e.code)) chooseCard(Number(e.code.slice(-1)) - 1);
+  else if (e.code === 'Enter' && game.complete && !game.cards?.length) nextLevel();
 });
 
 // Fixed-timestep loop.
@@ -379,6 +439,9 @@ window.bumper = {
   restart,
   startLevel,
   nextLevel,
+  fromStart,
+  chooseCard,
+  get run() { return run; },
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },
   areaClear: (x, y, half) => areaClear(game.world, x, y, half),
   pickType: () => pickType(game),

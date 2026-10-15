@@ -1,6 +1,7 @@
 // Canvas renderer. A camera follows the player around an arena larger than
 // the screen; a minimap shows the whole arena.
 import { CONFIG } from '../config.js';
+import { slicks } from './terrain.js';
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -163,6 +164,16 @@ export function render(r, game, debug) {
   ctx.stroke();
 
   drawTerrain(ctx);
+
+  // Ghost slick ice patches, fading out.
+  for (const sl of slicks) {
+    ctx.globalAlpha = Math.min(1, sl.life / 1.5) * 0.35;
+    ctx.fillStyle = '#bfe6ff';
+    ctx.beginPath();
+    ctx.arc(sl.x, sl.y, sl.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   // Primed groups (matched but waiting for the player): faint dashed links.
   ctx.lineCap = 'round';
@@ -509,7 +520,7 @@ function drawPlayer(ctx, pc, L, CW, game) {
   }
   if (CONFIG.features.damage) {
     // Dents darken the body as health drops; red flash when hit or squeezed.
-    const wear = 1 - Math.max(0, game.health) / CONFIG.damage.maxHealth;
+    const wear = 1 - Math.max(0, game.health) / game.maxHealth;
     if (wear > 0.05) {
       ctx.fillStyle = `rgba(40,30,30,${0.45 * wear})`;
       ctx.beginPath();

@@ -7,6 +7,15 @@ export const CONFIG = {
     levels: true,           // level goals + results screen (off: endless, colorSchedule)
     damage: true,           // health, impact/squeeze damage, repair color
     pileups: true,          // big clumps of cars rust into junk
+    upgrades: true,         // pick 1 of 3 upgrade cards after each level (off: all abilities unlocked)
+  },
+
+  // Run upgrades (see js/upgrades.js for the cards).
+  upgrades: {
+    startAbilities: ['chameleon'], // the rest are unlocked by cards
+    slickEvery: 0.12,       // Ghost slick: seconds between ice patches while phasing
+    slickRadius: 1.2,
+    slickLife: 6,
   },
 
   // Each level: colors in play, the goal, spawn pace, and a par time (s) for

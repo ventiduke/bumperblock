@@ -3,6 +3,11 @@
 import { CONFIG } from '../config.js';
 import { abilityLabel } from './abilities.js';
 
+// <tr> rows for [label, value] pairs.
+function statRows(rows) {
+  return rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+}
+
 export function createHUD() {
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -77,7 +82,7 @@ export function createHUD() {
 
       if (changed('damage', CONFIG.features.damage)) el.health.hidden = !CONFIG.features.damage;
       if (CONFIG.features.damage) {
-        const frac = Math.max(0, game.health / CONFIG.damage.maxHealth);
+        const frac = Math.max(0, game.health / game.maxHealth);
         const pct = Math.round(frac * 100);
         if (changed('hp', pct)) {
           el.healthFill.style.width = `${pct}%`;
@@ -101,6 +106,7 @@ export function createHUD() {
       if (changed('abilityRing', rq)) el.abilityBtn.style.setProperty('--ability', rq);
       const label = pl.towed ? 'DROP' : abilityLabel(pl.ability);
       if (changed('abilityLabel', label)) el.abilityLabel.textContent = label;
+      if (changed('canSwap', game.unlocked.length > 1)) el.cycleBtn.hidden = game.unlocked.length < 2;
       if (changed('abilityActive', active)) {
         el.abilityBtn.classList.toggle('active', active);
         el.cycleBtn.classList.toggle('locked', active);
@@ -122,7 +128,8 @@ export function createHUD() {
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2400);
     },
-    showGameOver(title, score, levelIndex) {
+    showGameOver(title, score, levelIndex, summary = []) {
+      $('go-stats').innerHTML = statRows(summary);
       el.goTitle.textContent = title;
       el.goLevel.textContent = CONFIG.features.levels ? `Level ${levelIndex + 1} · Score` : 'Score';
       el.finalScore.textContent = score;
@@ -130,7 +137,9 @@ export function createHUD() {
       el.toast.classList.remove('show');
       el.gameover.hidden = false;
     },
-    showLevelComplete({ level, time, health, bonus, score, stars, damage }) {
+    // Set by main: called with the index of the card the player picks.
+    onPickCard: null,
+    showLevelComplete({ level, time, health, bonus, score, stars, damage, summary = [], cards = [], picks = [] }) {
       el.luTitle.textContent = `Level ${level} clear!`;
       el.luStars.innerHTML = [1, 2, 3].map((i) => `<span class="${i <= stars ? 'on' : ''}">★</span>`).join('');
       const rows = [
@@ -139,7 +148,19 @@ export function createHUD() {
         ['Bonus', `+${bonus}`],
         ['Score', `${score}`],
       ];
-      el.luStats.innerHTML = rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+      el.luStats.innerHTML = statRows(rows);
+      $('lu-summary').innerHTML = statRows(summary);
+      // Upgrade draft: pick one card to continue (or a plain Next button).
+      const cardsEl = $('lu-cards');
+      cardsEl.innerHTML = cards.map((c, i) => `
+        <button class="card ${c.kind}" type="button" data-i="${i}">
+          <span class="tag">${{ ability: 'New ability', upgrade: 'Upgrade', rule: 'Rule' }[c.kind]}</span>
+          <b>${c.name}</b><span class="desc">${c.desc}</span><span class="key">${i + 1}</span>
+        </button>`).join('');
+      cardsEl.querySelectorAll('.card').forEach((b) => b.addEventListener('click', () => this.onPickCard?.(Number(b.dataset.i))));
+      $('lu-pick').hidden = !cards.length;
+      $('next-level').hidden = cards.length > 0;
+      $('lu-picks').textContent = picks.length ? `This run: ${picks.join(', ')}` : '';
       el.toast.classList.remove('show');
       el.levelup.hidden = false;
     },

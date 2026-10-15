@@ -319,3 +319,50 @@ button {
 @media (orientation: portrait) and (pointer: coarse) {
   #rotate { display: flex; }
 }
+
+/* Results / game over: run summary rows. */
+table.summary { margin: 0 auto 14px; border-collapse: collapse; font-size: 12px; }
+table.summary td { padding: 2px 8px; }
+table.summary td:first-child { color: var(--muted); text-align: left; white-space: nowrap; }
+table.summary td:last-child { text-align: right; }
+
+/* Level results with the upgrade draft beside the stats. */
+.overlay .panel { max-height: 94vh; overflow-y: auto; }
+.overlay .panel.wide {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  max-width: 94vw;
+  padding: 18px 22px;
+}
+.panel.wide .col { min-width: 0; }
+.panel.wide .col:last-child { flex: 1.5; }
+#lu-pick { margin: 0 0 8px; font-weight: 700; color: var(--ink); }
+#lu-pick[hidden], #next-level[hidden] { display: none; }
+#lu-cards { display: flex; gap: 10px; }
+.card {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 10px 12px;
+  background: #262a34;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.card b { font-size: 15px; }
+.card .tag { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.card.ability { border-color: #8fd3ff; }
+.card.ability .tag { color: #8fd3ff; }
+.card.rule { border-color: #ffd23f; }
+.card.rule .tag { color: #ffd23f; }
+.card .desc { color: #c9ced8; }
+.card .key { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--muted); }
+.card:active { transform: scale(0.97); }
+#lu-picks { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
+#lu-stars { font-size: 28px; margin-bottom: 4px; }
