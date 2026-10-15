@@ -23,12 +23,16 @@ export const CONFIG = {
   // Past the last level, it repeats with bigger goals and faster spawns.
   levels: [
     // `types` (optional) sets the vehicle mix; otherwise vehicleMix is used.
+    // `caps` (optional) overrides per-type limits, e.g. how many cops at once.
     { colors: 3, goal: { total: 15 }, par: 90, initialCars: 12, spawn: { startInterval: 1.8, minInterval: 0.8, rampTime: 90 },
       types: { car: 70, motorcycle: 18, bus: 12 } },
     { colors: 4, goal: { each: 6 }, par: 120, initialCars: 14, spawn: { startInterval: 1.5, minInterval: 0.6, rampTime: 100 },
       types: { car: 60, motorcycle: 16, bus: 12, semi: 12 } },
-    { colors: 4, goal: { total: 35 }, par: 140, initialCars: 16, spawn: { startInterval: 1.3, minInterval: 0.5, rampTime: 100 } },
-    { colors: 5, goal: { each: 6 }, par: 170, initialCars: 16, spawn: { startInterval: 1.2, minInterval: 0.45, rampTime: 120 } },
+    // Police ease in: 1 at a time (and rarer) on their first level, then 2, then the full 3.
+    { colors: 4, goal: { total: 35 }, par: 140, initialCars: 16, spawn: { startInterval: 1.3, minInterval: 0.5, rampTime: 100 },
+      types: { car: 58, motorcycle: 15, bus: 12, semi: 11, police: 4 }, caps: { police: 1 } },
+    { colors: 5, goal: { each: 6 }, par: 170, initialCars: 16, spawn: { startInterval: 1.2, minInterval: 0.45, rampTime: 120 },
+      types: { car: 56, motorcycle: 14, bus: 11, semi: 11, police: 7 }, caps: { police: 2 } },
     { colors: 6, goal: { each: 6 }, par: 200, initialCars: 18, spawn: { startInterval: 1.1, minInterval: 0.4, rampTime: 120 } },
   ],
   levelScaling: { goalPerLevel: 2, spawnFactor: 0.92 }, // applied per level past the list

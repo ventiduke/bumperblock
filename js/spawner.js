@@ -30,8 +30,8 @@ export function pickType(game) {
   let r = Math.random() * total;
   let type = 'car';
   for (const [t, w] of Object.entries(mix)) if ((r -= w) < 0) { type = t; break; }
-  // Respect a per-type cap (e.g. police.max).
-  const max = CONFIG.vehicles[type]?.max;
+  // Respect a per-type cap: the level's `caps`, else the vehicle's `max`.
+  const max = game.level.caps?.[type] ?? CONFIG.vehicles[type]?.max;
   if (max != null && game.cars.filter((c) => c.type === type).length >= max) return 'car';
   return type;
 }

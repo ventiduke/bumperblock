@@ -431,3 +431,15 @@ persistence.
 
   The older suites (47 + 27, plus 5 cop checks) were adjusted for the draft
   and still pass.
+
+**Follow-up:** cops were too frequent on their first level. Levels now take
+an optional `caps` (per-type limits that override `vehicles.<type>.max`):
+
+| Level | Police spawn weight | Max police at once |
+| --- | --- | --- |
+| 3 | 4 | 1 |
+| 4 | 7 | 2 |
+| 5 and later | default | 3 |
+
+In a 2-minute run of each level, the highest count seen was 1, 2 and 3
+respectively.
