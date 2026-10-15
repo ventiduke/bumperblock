@@ -115,6 +115,29 @@ Minimal by design:
 - The core tension: the order needs blues, the repair color is red, and both
   are in the crowd.
 
+## Run upgrades
+
+- A run starts with one ability (Chameleon). After each level you pick
+  **1 of 3 cards** that last for the rest of the run:
+  - **New ability:** unlock Phase or Tow.
+  - **Upgrades** (they stack):
+    - Turbo: faster boost recharge.
+    - Big bang: bigger blasts.
+    - Mechanic: longer repair windows.
+    - Long shimmer: longer chameleon.
+    - Long rope: longer tow.
+    - Scrapper: wider junk clearing.
+    - Bull bars: softer cop rams.
+    - Plating: more max health.
+  - **Rules** (once each):
+    - Feeding frenzy: matches of 4+ heal.
+    - Heavy fare: buses and semis count triple.
+    - Ghost slick: phase leaves ice.
+- Retrying a level keeps your picks. Starting over from level 1 starts a fresh
+  run.
+- This is the playable prototype of the eventual skill tree. The picks players
+  keep reaching for become its branches.
+
 ## Pile-ups
 
 - A big clump of touching cars (7 or more, any colors) that holds together
@@ -160,8 +183,8 @@ Arenas have features that change how you drive and where cars pile up:
 ## Future ideas (not in Phase 1)
 
 - Wildcard cars.
-- Run upgrades: pick 1 of 3 after each level. Later this becomes a skill tree
-  with exclusive branches, then prestige.
+- A persistent skill tree with exclusive branches, then prestige, built from
+  whichever run upgrades prove most fun.
 - More abilities: magnet, horn or shockwave, paint bomb, oil slick, junk
   shredder.
 - Heavy cars that need a bigger group (e.g. 4+) or two hits to tag.

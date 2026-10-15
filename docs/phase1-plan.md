@@ -381,3 +381,53 @@ chase us down faster?"
   2.7 m and loses about 16 HP over 3.5 s.
 - **Cap:** at most `police.max` (3) on the field. The spawn pick falls back to
   a car beyond that.
+
+## Round 7: upgrade draft, run summary, cache-busting
+
+This prototypes the "choices" half of the skill tree idea before building any
+persistence.
+
+- **Upgrade draft** (`js/upgrades.js`, `features.upgrades`,
+  `config.upgrades`):
+  - A run starts with `startAbilities` (Chameleon). Clearing a level offers 3
+    distinct cards on the results screen; click one, or press 1 / 2 / 3.
+  - Ability cards appear only while that ability is locked. Rule cards appear
+    once per run. Cards with `needs` (Long rope needs Tow, Ghost slick needs
+    Phase) appear only once that ability is unlocked.
+  - Picks become `game.mods`, which the systems read:
+    - Player: boost recharge.
+    - Blasts: radius.
+    - Damage: repair window length, cop ram damage, max health.
+    - Abilities: chameleon duration, tow range and rope length, phase slick.
+    - Pile-ups: junk clear radius.
+    - Matching: Heavy fare weights.
+    - Explosions: Feeding frenzy heal.
+  - Ghost slick drops short-lived ice circles (`terrain.slicks`), which
+    `surfaceAt` checks before the static zones.
+  - A newly unlocked ability is equipped automatically. Retry keeps the run;
+    "Level 1" resets it. Number keys and swapping only reach unlocked
+    abilities, and the swap button hides while only one is unlocked.
+- **Run summary:** per-level stats (`game.stats`) are shown on both the results
+  and game-over screens:
+  - matches, cars cleared and biggest match
+  - convoys and junk cleared
+  - ability uses
+  - total damage, with the top 3 sources by share
+- **Cache-busting:** `tools/stamp.mjs` writes an import map into `index.html`
+  that points every module at `file.js?v=<content hash>`, and stamps
+  `style.css` and `planck.min.js` the same way. Only changed files get new
+  URLs, so a normal refresh picks up a deploy. **Run `node tools/stamp.mjs`
+  before every commit.** Browsers without import maps (iOS before 16.4) still
+  work, they just don't get the cache-busting.
+- **Verification:** 24 new checks:
+  - every request is stamped, and the stamps match file contents
+  - run start state, and locked abilities can't be equipped
+  - the draft offers 3 distinct, valid cards, and the summary is shown
+  - ability cards unlock and equip; key picks work
+  - each card's effect
+  - retry and fresh-run behavior
+  - the game-over summary
+  - `features.upgrades` off
+
+  The older suites (47 + 27, plus 5 cop checks) were adjusted for the draft
+  and still pass.
