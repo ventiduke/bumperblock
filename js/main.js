@@ -14,6 +14,7 @@ import { getLevel, endlessLevel, activeColors, goalMet, goalText, starsFor, leve
 import { initDamage, impactDamage, updateDamage, repairFrom, copRam, heal } from './damage.js';
 import { newRun, computeMods, unlockedAbilities, drawCards, pickCard, cardById } from './upgrades.js';
 import { abilityLabel } from './abilities.js';
+import * as sfx from './audio.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
 import { initAbilities, useAbility, cycleAbility, selectAbility, updateAbilities } from './abilities.js';
 
@@ -70,8 +71,18 @@ function newGame(levelIndex = 0, startScore = 0) {
   g.onCopRam = (car) => {
     g.stats.copRams++;
     copRam(g, car);
+    sfx.ram();
+    sfx.buzz([40, 30, 40]);
   };
-  g.onRepairChange = (c) => (c >= 0 ? hud.announce('Repair color', CONFIG.colors[c]) : hud.announce('No repairs for now'));
+  g.onRepairChange = (c) => {
+    if (c >= 0) hud.announce('Repair color', CONFIG.colors[c]);
+    else hud.announce('No repairs for now');
+    sfx.ding();
+  };
+  g.onJunk = () => sfx.rust();
+  g.onHeal = () => sfx.heal();
+  g.marks = [];     // skid marks: { x1, y1, x2, y2, life }
+  g.hitstop = 0;    // seconds of freeze-frame left
   createTerrain(world);
   g.player = createPlayer(world);
   g.player.mods = g.mods;
@@ -142,7 +153,11 @@ function onImpact(g, contact, impulse) {
   }
   if (maxImp < CONFIG.ai.stunImpulse) return;
 
-  if (playerInvolved) impactDamage(g, maxImp, !(A && B), contact.approach);
+  if (playerInvolved) {
+    impactDamage(g, maxImp, !(A && B), contact.approach);
+    if (maxImp > CONFIG.audio.impactMin) sfx.impact(maxImp / 30, !(A && B));
+    if (maxImp > 12) sfx.buzz(Math.min(45, Math.round(maxImp)));
+  }
 
   // Hard hits stun AI so they settle where they land (optionally AI-AI/wall hits too).
   if (playerInvolved || CONFIG.ai.stunFromAI) {
@@ -210,6 +225,10 @@ function explode(g, group) {
   g.score += pts;
   floatText(g.fx, cx, cy, g.combo > 1 ? `+${pts} x${g.combo}` : `+${pts}`);
   if (convoy) floatText(g.fx, cx, cy - 1, 'CONVOY!', '#ffd23f');
+  sfx.explode(weight, g.combo, convoy);
+  sfx.buzz(weight >= 4 ? 60 : 30);
+  // Freeze-frame on a big moment so it lands.
+  if (weight >= 4 || convoy || g.combo >= 2) g.hitstop = CONFIG.feel.hitstop;
   if (junk) floatText(g.fx, cx, cy + 1, `${junk} junk cleared`, '#c9ced8');
   const st = g.stats;
   st.matches++;
@@ -236,12 +255,37 @@ function explode(g, group) {
   shove(g.player);
 }
 
+// Tire marks from the player's rear wheels while sliding sideways (ice,
+// skids after a ram, hard turns), fading out over feel.skidLife.
+function updateSkidMarks(g, dt) {
+  const F = CONFIG.feel;
+  let j = 0;
+  for (const m of g.marks) if ((m.life -= dt) > 0) g.marks[j++] = m;
+  g.marks.length = j;
+  const p = g.player;
+  const b = p.body;
+  const v = b.getLinearVelocity();
+  const a = b.getAngle();
+  const slip = Math.abs(-Math.sin(a) * v.x + Math.cos(a) * v.y);
+  const L = CONFIG.car.length, W = CONFIG.car.width;
+  const wheels = [b.getWorldPoint(pl.Vec2(-L * 0.32, -W * 0.4)), b.getWorldPoint(pl.Vec2(-L * 0.32, W * 0.4))];
+  if ((slip > F.skidSlip || p.skid > 0) && v.length() > 1 && p.prevWheels) {
+    for (let i = 0; i < 2; i++) {
+      g.marks.push({ x1: p.prevWheels[i].x, y1: p.prevWheels[i].y, x2: wheels[i].x, y2: wheels[i].y, life: F.skidLife });
+    }
+    if (g.marks.length > 600) g.marks.splice(0, g.marks.length - 600);
+  }
+  p.prevWheels = wheels.map((w) => ({ x: w.x, y: w.y }));
+}
+
 function gameOver(g, title) {
   g.over = true;
   const p = g.player.body.getPosition();
   burst(g.fx, p.x, p.y, '#ffffff', 30, 8, 0.8, 0.25);
   addShake(g.fx, 0.3);
   hud.showGameOver(title, g.score, g.levelIndex, runSummary(g));
+  sfx.lose();
+  sfx.buzz(200);
 }
 
 // Rows for the results / game-over screens (what happened this level).
@@ -270,6 +314,7 @@ function completeLevel(g) {
   const bonus = levelBonus(g.level, time, CONFIG.features.damage ? g.health : 0);
   g.score += bonus;
   const stars = starsFor(g.level, time);
+  sfx.win(stars);
   g.cards = CONFIG.features.upgrades ? drawCards(run, 3) : [];
   hud.showLevelComplete({
     level: g.levelIndex + 1, time, health: g.health, bonus, score: g.score, stars, damage: CONFIG.features.damage,
@@ -283,13 +328,16 @@ function step(g, dt) {
     return;
   }
   const p = g.player;
-  if (input.consumeBoost()) tryBoost(p);
+  if (input.consumeBoost() && tryBoost(p)) sfx.boost();
   // Number keys pick an ability directly; Q / the swap button cycle.
   const pick = input.consumeSelect();
   const cycle = input.consumeCycle();
   const swapped = pick >= 0 ? selectAbility(g, pick) : cycle && cycleAbility(g);
   if (swapped) equipped = p.ability;
-  if (input.consumeAbility()) useAbility(g);
+  if (input.consumeAbility()) {
+    const wasTowing = !!p.towed;
+    if (useAbility(g)) wasTowing ? sfx.drop() : sfx.ability(p.ability);
+  }
   updateAbilities(g, dt);
   updatePlayer(p, dt, input.steer(), input.brake());
   for (const car of g.cars) {
@@ -302,11 +350,16 @@ function step(g, dt) {
   g.elapsed += dt;
 
   g.matchInfo = updateMatches(g, dt);
+  // A group that just started counting down gets the rising "arm" tone.
+  for (const grp of g.matchInfo.groups) {
+    if (Math.max(...grp.map((c) => c.matchTimer)) <= dt * 1.5) { sfx.arm(); break; }
+  }
   const links = g.matchInfo.links;
   for (const group of g.matchInfo.ready) explode(g, group);
   if (g.matchInfo.ready.length) g.matchInfo = emptyMatchInfo();
   g.pileups = CONFIG.features.pileups ? updatePileups(g, links, dt) : 0;
   updateSlicks(dt);
+  if (CONFIG.feel.skidMarks) updateSkidMarks(g, dt);
 
   if (CONFIG.features.levels && goalMet(g.level, g.cleared)) {
     completeLevel(g);
@@ -319,6 +372,7 @@ function step(g, dt) {
   if (colors > g.colors) {
     g.colors = colors;
     hud.announce('New color!', CONFIG.colors[colors - 1]);
+    sfx.ding();
   }
 
   if (g.comboTimer > 0) {
@@ -355,6 +409,7 @@ function chooseCard(i) {
   const card = game.complete && game.cards?.[i];
   if (!card) return;
   pickCard(run, card.id);
+  sfx.click();
   if (card.kind === 'ability') equipped = card.id; // try the new toy right away
   nextLevel();
 }
@@ -365,11 +420,42 @@ document.getElementById('restart-big').addEventListener('click', restart);
 document.getElementById('restart-first').addEventListener('click', fromStart);
 document.getElementById('next-level').addEventListener('click', nextLevel);
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'KeyR') restart();
+  if (e.code === 'KeyM') {
+    sfx.setMuted(!sfx.isMuted());
+    hud.setMuted(sfx.isMuted());
+  } else if (e.code === 'KeyR') restart();
   else if (e.code === 'Enter' && game.over) restart();
   else if (game.complete && game.cards?.length && /^(Digit|Numpad)[1-3]$/.test(e.code)) chooseCard(Number(e.code.slice(-1)) - 1);
   else if (e.code === 'Enter' && game.complete && !game.cards?.length) nextLevel();
 });
+
+// Continuous sound: engine, cop siren by distance, low-health heartbeat,
+// boxed-in warning beeps.
+function updateSound(g, paused) {
+  const stopped = paused || g.over || g.complete;
+  const p = g.player.body;
+  const pp = p.getPosition();
+  let siren = 0;
+  for (const c of g.cars) {
+    if (c.type !== 'police' || c.junk) continue;
+    const q = c.body.getPosition();
+    siren = Math.max(siren, 1 - Math.hypot(q.x - pp.x, q.y - pp.y) / c.spec.chaseRange);
+  }
+  sfx.update({ speed: p.getLinearVelocity().length(), sirenLevel: Math.max(0, siren), paused: stopped });
+  if (stopped) return;
+  if (CONFIG.features.damage && g.health < g.maxHealth * 0.25) sfx.heartbeat();
+  if (g.player.stuckTimer > 0.6) sfx.warn();
+}
+
+// Start sound on the first touch / key (browsers need a gesture), and resume
+// it if the page was backgrounded.
+for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => sfx.unlock(), { capture: true });
+document.getElementById('mute').addEventListener('click', () => {
+  sfx.unlock();
+  sfx.setMuted(!sfx.isMuted());
+  hud.setMuted(sfx.isMuted());
+});
+hud.setMuted(sfx.isMuted());
 
 // Fixed-timestep loop.
 const DT = 1 / CONFIG.physics.stepHz;
@@ -401,6 +487,10 @@ function frame(now) {
   if (elapsed > 0) fps += (1 / elapsed - fps) * 0.05;
 
   if (rotatePrompt.matches) elapsed = 0; // paused behind the "rotate" overlay
+  if (game.hitstop > 0) {
+    game.hitstop -= elapsed; // freeze-frame: render, don't simulate
+    elapsed = 0;
+  }
   accumulator += elapsed;
   let steps = 0;
   while (accumulator >= DT && steps < CONFIG.physics.maxSubSteps) {
@@ -413,6 +503,7 @@ function frame(now) {
   updateCamera(renderer, game.camera, game.player, elapsed);
   render(renderer, game, DEBUG);
   hud.update(game);
+  updateSound(game, rotatePrompt.matches);
 
   if (DEBUG && (debugTimer -= elapsed) <= 0) {
     debugTimer = 0.25;
@@ -442,6 +533,7 @@ window.bumper = {
   fromStart,
   chooseCard,
   get run() { return run; },
+  sfx,
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },
   areaClear: (x, y, half) => areaClear(game.world, x, y, half),
   pickType: () => pickType(game),

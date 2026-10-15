@@ -165,6 +165,19 @@ export function render(r, game, debug) {
 
   drawTerrain(ctx);
 
+  // Skid marks, fading out.
+  if (game.marks?.length) {
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 0.16;
+    for (const m of game.marks) {
+      ctx.strokeStyle = `rgba(10,10,12,${0.32 * Math.min(1, m.life / CONFIG.feel.skidLife * 1.5)})`;
+      ctx.beginPath();
+      ctx.moveTo(m.x1, m.y1);
+      ctx.lineTo(m.x2, m.y2);
+      ctx.stroke();
+    }
+  }
+
   // Ghost slick ice patches, fading out.
   for (const sl of slicks) {
     ctx.globalAlpha = Math.min(1, sl.life / 1.5) * 0.35;

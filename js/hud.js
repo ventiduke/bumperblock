@@ -119,6 +119,10 @@ export function createHUD() {
       const ready = game.player.boostCharge >= CONFIG.boost.cost - 1e-6;
       if (changed('ready', ready)) el.boostBtn.classList.toggle('disabled', !ready);
     },
+    setMuted(m) {
+      $('mute').classList.toggle('muted', m);
+      $('mute').setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
+    },
     // Short banner under the HUD, with an optional color swatch.
     announce(text, color = null) {
       el.toastText.textContent = text;

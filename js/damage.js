@@ -132,5 +132,8 @@ export function heal(g, amount, x, y) {
   const before = g.health;
   g.health = Math.min(g.maxHealth, g.health + amount);
   const healed = Math.round(g.health - before);
-  if (healed > 0) floatText(g.fx, x, y + 1.0, `+${healed} HP`, '#6ef59a');
+  if (healed > 0) {
+    floatText(g.fx, x, y + 1.0, `+${healed} HP`, '#6ef59a');
+    g.onHeal?.();
+  }
 }

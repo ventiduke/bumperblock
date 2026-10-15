@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Bumper Block</title>
-  <link rel="stylesheet" href="style.css?v=0107faa1">
+  <link rel="stylesheet" href="style.css?v=d71f7df9">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -23,6 +23,13 @@
       <div id="repair" title="Repair color: explode these to heal"><span class="cross"></span></div>
       <div id="health-bar"><div id="health-fill"></div></div>
     </div>
+    <button id="mute" type="button" aria-label="Mute sound">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+        <path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="cross" d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
     <button id="restart" type="button" aria-label="Retry level">&#x21bb;</button>
   </div>
 
@@ -75,26 +82,27 @@
   <script type="importmap">
   {
     "imports": {
-      "./config.js": "./config.js?v=69e6b160",
+      "./config.js": "./config.js?v=409fa9ba",
       "./js/abilities.js": "./js/abilities.js?v=c25e1be8",
       "./js/ai.js": "./js/ai.js?v=493854ae",
-      "./js/damage.js": "./js/damage.js?v=32a6d4ff",
+      "./js/audio.js": "./js/audio.js?v=d4739a14",
+      "./js/damage.js": "./js/damage.js?v=fe0bc0ea",
       "./js/effects.js": "./js/effects.js?v=01992020",
-      "./js/hud.js": "./js/hud.js?v=0d0e02dd",
+      "./js/hud.js": "./js/hud.js?v=9b43db6f",
       "./js/input.js": "./js/input.js?v=0644f353",
       "./js/levels.js": "./js/levels.js?v=f0e6090e",
-      "./js/main.js": "./js/main.js?v=1d2a1612",
+      "./js/main.js": "./js/main.js?v=00601da5",
       "./js/match.js": "./js/match.js?v=df3e4b51",
       "./js/physics.js": "./js/physics.js?v=1b1059e2",
-      "./js/pileup.js": "./js/pileup.js?v=2a836727",
+      "./js/pileup.js": "./js/pileup.js?v=db631067",
       "./js/player.js": "./js/player.js?v=689b09db",
-      "./js/render.js": "./js/render.js?v=4e87a8a8",
+      "./js/render.js": "./js/render.js?v=e869f02f",
       "./js/spawner.js": "./js/spawner.js?v=a555c7be",
       "./js/terrain.js": "./js/terrain.js?v=80d0e6ae",
       "./js/upgrades.js": "./js/upgrades.js?v=e26ab28d"
     }
   }
   </script>
-  <script type="module" src="js/main.js?v=1d2a1612"></script>
+  <script type="module" src="js/main.js?v=00601da5"></script>
 </body>
 </html>

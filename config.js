@@ -280,6 +280,21 @@ export const CONFIG = {
     sparkImpulse: 3,
   },
 
+  // Synthesized sound (js/audio.js) and game feel.
+  audio: {
+    volume: 0.55,           // master
+    engine: 0.035,          // engine hum loudness
+    siren: 0.09,            // police siren at point-blank range
+    impactMin: 3,           // impulse (N*s) below which hits make no sound
+  },
+  feel: {
+    hitstop: 0.09,          // seconds of freeze-frame on a big match (4+, convoy or combo)
+    haptics: true,          // vibrate on hard hits / explosions where supported (Android)
+    skidMarks: true,
+    skidSlip: 2.2,          // sideways speed (m/s) that leaves tire marks
+    skidLife: 4,            // seconds marks take to fade
+  },
+
   render: {
     maxDpr: 2,              // cap device pixel ratio for fill-rate on phones
     minimapWidth: 132,      // px; 0 hides the minimap

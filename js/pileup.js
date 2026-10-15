@@ -54,6 +54,7 @@ export function updatePileups(game, links, dt) {
 
 function makeJunk(game, car) {
   const P = CONFIG.pileup;
+  game.onJunk?.(car);
   car.junk = true;
   car.color = -1;
   car.primed = false;
