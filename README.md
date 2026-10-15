@@ -22,5 +22,7 @@ and open it in a browser. All tuning values live in `config.js`.
 Before committing, run `node tools/stamp.mjs`: it version-stamps every script and
 stylesheet in `index.html` (by content hash) so a normal refresh picks up deploys.
 
+- `docs/unity-handoff.md` — **start here for the Unity build**: what the prototype proved, each system's intent vs. how the prototype did it, lessons learned, open questions
 - `docs/design.md` — full game vision
 - `docs/phase1-plan.md` — Phase 1 architecture, assumptions, and findings
+- `tests/` — browser behavior tests (`node tests/run-all.mjs`); a checklist of intended behavior to adapt as acceptance criteria

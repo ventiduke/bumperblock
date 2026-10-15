@@ -483,3 +483,22 @@ respectively.
 
   The older suites still pass (47 + 27 + 24 + 5). Actual sound quality can't
   be judged headless; it needs your ears.
+
+## Wrap-up: prototype complete
+
+- **`docs/unity-handoff.md`** passes on what was learned without locking the
+  Unity build into this implementation. Every system is split into four
+  parts:
+  - **Intent:** validated in playtests.
+  - **How the prototype did it:** reference only.
+  - **Starting numbers:** a baseline to retune.
+  - **Room to change.**
+
+  It also covers what the prototype proved, a lessons-learned table
+  (symptom → cause → fix), alternatives we tried, open questions, and
+  possible Unity equivalents.
+- **`tests/`:** the 120 browser behavior checks written during development,
+  made portable (`BB_URL`, the standard `playwright` import, a non-zero exit
+  on failure) with a `run-all` script and a README.
+- **Tag `prototype-v1`:** marks the final prototype. The Pages build stays
+  live as the reference.
