@@ -4,6 +4,7 @@ import { CONFIG } from '../config.js';
 import { SOLID_MASK, SENSOR_MASK, CAT_WALL } from './physics.js';
 import { stunAI } from './ai.js';
 import { burst, floatText } from './effects.js';
+import { addSlick } from './terrain.js';
 
 const pl = window.planck;
 
@@ -21,18 +22,22 @@ export function abilityLabel(name) {
   return { chameleon: 'CHAMELEON', phase: 'PHASE', tow: 'TOW' }[name] || name.toUpperCase();
 }
 
-// Equip ability `index` from the list (number keys). Not while one is active.
+// Equip ability `index` from CONFIG.abilities.list (number keys), if it's
+// unlocked this run. Not while one is active.
 export function selectAbility(g, index) {
   const p = g.player;
-  const list = CONFIG.abilities.list;
-  if (p.abilityTime > 0 || p.towed || index < 0 || index >= list.length) return false;
-  p.ability = list[index];
+  const name = CONFIG.abilities.list[index];
+  if (p.abilityTime > 0 || p.towed || !name || !g.unlocked.includes(name)) return false;
+  p.ability = name;
   return true;
 }
 
+// Swap to the next unlocked ability.
 export function cycleAbility(g) {
-  const list = CONFIG.abilities.list;
-  return selectAbility(g, (list.indexOf(g.player.ability) + 1) % list.length);
+  const list = g.unlocked;
+  if (list.length < 2) return false;
+  const next = list[(list.indexOf(g.player.ability) + 1) % list.length];
+  return selectAbility(g, CONFIG.abilities.list.indexOf(next));
 }
 
 export function useAbility(g) {
@@ -42,13 +47,13 @@ export function useAbility(g) {
   if (p.abilityCharge < 1 || p.abilityTime > 0) return false;
   const pos = p.body.getPosition();
   if (p.ability === 'chameleon') {
-    p.chameleon = p.abilityTime = A.chameleon.duration;
+    p.chameleon = p.abilityTime = A.chameleon.duration + (g.mods?.chameleonPlus ?? 0);
   } else if (p.ability === 'phase') {
     p.abilityTime = A.phase.duration;
     p.phaseExtra = 0;
     setPhase(p, true);
   } else if (p.ability === 'tow') {
-    const target = nearestCar(g, A.tow.range);
+    const target = nearestCar(g, A.tow.range + (g.mods?.ropePlus ?? 0));
     if (!target) {
       floatText(g.fx, pos.x, pos.y - 1.2, 'nothing to tow', '#c9ced8');
       return false;
@@ -57,6 +62,7 @@ export function useAbility(g) {
     p.abilityTime = A.tow.maxTime;
   }
   p.abilityCharge = 0;
+  if (g.stats) g.stats.abilities[p.ability] = (g.stats.abilities[p.ability] || 0) + 1;
   burst(g.fx, pos.x, pos.y, '#ffffff', 10, 4, 0.4, 0.18);
   return true;
 }
@@ -86,7 +92,7 @@ function attachTow(g, car) {
   p.towJoint = g.world.createJoint(new pl.RopeJoint({
     bodyA: p.body, bodyB: car.body,
     localAnchorA: pl.Vec2(-L / 2, 0), localAnchorB: end,
-    maxLength: CONFIG.abilities.tow.ropeLength, collideConnected: true,
+    maxLength: CONFIG.abilities.tow.ropeLength + (g.mods?.ropePlus ?? 0), collideConnected: true,
   }));
   p.towed = car;
   car.towed = true;
@@ -135,6 +141,15 @@ function overlapping(g) {
 export function updateAbilities(g, dt) {
   const p = g.player;
   const A = CONFIG.abilities;
+  // Ghost slick: phasing drops ice patches behind you.
+  if (p.phasing && g.mods?.phaseSlick) {
+    p.slickTimer = (p.slickTimer || 0) - dt;
+    if (p.slickTimer <= 0) {
+      p.slickTimer = CONFIG.upgrades.slickEvery;
+      const back = p.body.getWorldPoint(pl.Vec2(-CONFIG.car.length / 2, 0));
+      addSlick(back.x, back.y);
+    }
+  }
   if (p.abilityTime > 0) {
     p.abilityTime -= dt;
     if (p.ability === 'chameleon') p.chameleon = Math.max(0, p.abilityTime);

@@ -37,7 +37,7 @@ export function updatePlayer(p, dt, steer, brake = false) {
   const surf = surfaceAt(pos.x, pos.y);
   body.setLinearDamping(P.linearDamping * surf.damping);
 
-  p.boostCharge = Math.min(1, p.boostCharge + dt / B.rechargeTime);
+  p.boostCharge = Math.min(1, p.boostCharge + (dt / B.rechargeTime) * (p.mods?.boostRecharge ?? 1));
   const boosting = p.boostTime > 0;
   if (boosting) p.boostTime -= dt;
 

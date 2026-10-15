@@ -69,7 +69,7 @@ function makeJunk(game, car) {
 
 // Destroy junk within clearRadius of any exploding car. Returns how many.
 export function clearJunkNear(game, group) {
-  const R = CONFIG.pileup.clearRadius;
+  const R = CONFIG.pileup.clearRadius * (game.mods?.junkClear ?? 1);
   let n = 0;
   for (const junk of game.cars) {
     if (!junk.junk || junk.dead) continue;

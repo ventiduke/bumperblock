@@ -104,7 +104,7 @@ export function updateMatches(game, dt) {
   const chameleon = game.player && game.player.chameleon > 0;
   for (const list of comps.values()) {
     const touchesPlayer = list.some((car) => nearPlayer.has(car));
-    const size = groupWeight(list) + (chameleon && touchesPlayer ? 1 : 0);
+    const size = groupWeight(list, game.mods) + (chameleon && touchesPlayer ? 1 : 0);
     const qualifies = list[0].color >= 0 && size >= M.minGroup;
     const armed = qualifies && isArmed(list, M.mode, nearPlayer);
     for (const car of list) car.primed = qualifies && !armed;
@@ -147,9 +147,17 @@ function isArmed(list, mode, nearPlayer) {
 }
 
 // How much a group counts toward match size and goals (bus = 2, etc.).
-export function groupWeight(list) {
+// The Heavy fare upgrade makes buses and semis count `heavyCount` in total.
+export function groupWeight(list, mods) {
   let n = 0;
-  for (const car of list) n += car.counts ?? 1;
+  for (const car of list) {
+    let c = car.counts ?? 1;
+    if (mods?.heavyCount) {
+      if (car.type === 'bus') c = mods.heavyCount;
+      else if (car.type === 'semi' || car.type === 'trailer') c = mods.heavyCount / 2;
+    }
+    n += c;
+  }
   return n;
 }
 

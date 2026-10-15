@@ -22,9 +22,30 @@ export function createTerrain(world) {
   }
 }
 
-// Handling multipliers at a point (first matching zone wins).
+// Temporary ice patches (the Ghost slick upgrade): { x, y, r, life, max }.
+export const slicks = [];
+
+export function addSlick(x, y) {
+  const U = CONFIG.upgrades;
+  slicks.push({ x, y, r: U.slickRadius, life: U.slickLife, max: U.slickLife });
+}
+
+export function updateSlicks(dt) {
+  let j = 0;
+  for (const s of slicks) if ((s.life -= dt) > 0) slicks[j++] = s;
+  slicks.length = j;
+}
+
+export function clearSlicks() {
+  slicks.length = 0;
+}
+
+// Handling multipliers at a point (slicks first, then the first matching zone).
 export function surfaceAt(x, y) {
   const T = CONFIG.terrain;
+  for (const s of slicks) {
+    if ((x - s.x) ** 2 + (y - s.y) ** 2 <= s.r * s.r) return T.types.ice;
+  }
   for (const z of T.zones) {
     if (Math.abs(x - z.x) <= z.w / 2 && Math.abs(y - z.y) <= z.h / 2) {
       return T.types[z.type] || NORMAL;

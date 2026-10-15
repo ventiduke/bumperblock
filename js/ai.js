@@ -162,7 +162,7 @@ export function updateAI(car, dt, world, game) {
     if (car.ramTimer <= 0 && touching(body, game.player.body)) {
       const pb = game.player.body;
       const a = body.getAngle();
-      const k = A.ramShove * pb.getMass();
+      const k = A.ramShove * (game.mods?.copRam ?? 1) * pb.getMass();
       pb.applyLinearImpulse(pl.Vec2(Math.cos(a) * k, Math.sin(a) * k), pb.getWorldCenter(), true);
       car.ramTimer = A.ramCooldown;
       game.onCopRam?.(car);
