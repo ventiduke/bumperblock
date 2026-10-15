@@ -443,3 +443,43 @@ an optional `caps` (per-type limits that override `vehicles.<type>.max`):
 
 In a 2-minute run of each level, the highest count seen was 1, 2 and 3
 respectively.
+
+## Round 8: sound and feel
+
+- **`js/audio.js`:** Web Audio synthesis, so there are no asset files.
+  - **Startup:** the context starts on the first pointer or key event, which
+    browsers require. Master gain feeds a compressor/limiter so stacked
+    sounds don't clip.
+  - **One-shots:** throttled per sound so a pile-up doesn't machine-gun.
+    - `impact(strength)`: filtered noise plus a low thump, scaled by impulse.
+    - `arm()`: rising tone over `match.delay`.
+    - `explode(weight, combo, convoy)`: a boom plus a chime arpeggio
+      transposed up by the combo, with a longer arpeggio for convoys.
+    - `boost`, `ability(name)`, `drop`, `ram`, `rust`, `heal`, `heartbeat`,
+      `warn`, `ding`, `click`, `win(stars)`, `lose`.
+  - **Loops:** an engine hum (sawtooth through a lowpass, pitch from speed)
+    and a siren (square wave with a square LFO) whose level is
+    `(1 − distance / chaseRange)²` for the nearest cop. Both are silent while
+    paused or on a results screen.
+  - **Hooks:** `main.js` calls these from the existing events. Pile-ups
+    (`onJunk`) and healing (`onHeal`) got small callbacks for this.
+- **Feel** (`config.feel`):
+  - `hitstop`: 0.09 s with the simulation frozen (still rendering) after a
+    match of 4+, a convoy, or a combo.
+  - `skidMarks`: rear-wheel segments while sideways slip exceeds `skidSlip`
+    or during a ram skid, fading over `skidLife`, with at most 600 segments.
+  - `haptics`: `navigator.vibrate` on impacts over 12 N·s, explosions, cop
+    rams and game over. Android only; iOS Safari has no vibration API.
+- **Mute:** a HUD button and the M key, stored in `localStorage`. It also
+  stops vibration.
+- **Verification:** 16 new checks:
+  - audio starts on a gesture
+  - each event's sound plays
+  - the freeze-frame triggers and actually pauses the simulation
+  - vibration fires, and stops when muted
+  - skid marks appear and fade
+  - mute persists across a reload
+  - 60 fps with sound running
+
+  The older suites still pass (47 + 27 + 24 + 5). Actual sound quality can't
+  be judged headless; it needs your ears.

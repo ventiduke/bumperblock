@@ -178,7 +178,23 @@ Arenas have features that change how you drive and where cars pile up:
 
 - Landscape phone, full screen, two-thumb play. Holding the phone upright
   shows a "rotate your phone" prompt and pauses.
-- Simple shapes and flat colors for now. Art, sound, and music come later.
+- Simple shapes and flat colors for now. Art and music come later.
+- **Sound** is synthesized in the browser, with no audio files:
+  - impact crunches scaled to the hit
+  - a rising tone while a match counts down, then a boom-and-chime that
+    climbs with combos
+  - cues for boost and each ability
+  - a siren that swells as a cop closes in, and a crunch on rams
+  - a rust creak, a heal sparkle, a low-health heartbeat, and boxed-in
+    warning beeps
+  - a level-clear fanfare, a game-over sting, and an engine hum that follows
+    your speed
+- **Feel:**
+  - a short freeze-frame on big matches
+  - skid marks when you slide
+  - phone vibration on hard hits (Android)
+  - one mute button (or M) silences both sound and vibration, and it's
+    remembered
 
 ## Future ideas (not in Phase 1)
 
