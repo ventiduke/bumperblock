@@ -582,6 +582,7 @@ parity with the prototype:
 
 - **Playable build:** https://ventiduke.github.io/bumperblock/. Add `?debug=1` for collision shapes, contact links, FPS and
   live stats.
+- **Setup guide:** `docs/unity-guide.html` ([live](https://ventiduke.github.io/bumperblock/docs/unity-guide.html)): install, project, GitHub, Claude Code, assets, publishing, ads, experiments, purchases.
 - **All tuning values:** `config.js`, commented.
 - **Behavior tests:** `tests/` (see its README). They read as a checklist of
   intended behavior, useful as acceptance criteria. Adapt them; don't port

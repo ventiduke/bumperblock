@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bumper Block in Unity</title>
+<meta name="description" content="End-to-end guide: standing up Bumper Block in Unity from the web prototype — install, project, GitHub, Claude Code, assets, publishing, ads, A/B tests, bandits and in-app purchases.">
+<style>
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede6;
+  --ink: #1d1f24;
+  --muted: #5d6270;
+  --line: #dcd9cf;
+  --accent: #e8590c;
+  --accent-soft: #fde6d6;
+  --blue: #1c6fd1;
+  --blue-soft: #dcebfb;
+  --green: #1f8a4c;
+  --green-soft: #dcf2e4;
+  --yellow: #a86b00;
+  --yellow-soft: #fbefd2;
+  --red: #c92a3a;
+  --red-soft: #fbe0e3;
+  --code-bg: #1d1f24;
+  --code-ink: #e9ebef;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14161c; --surface: #1c1f27; --surface-2: #232733; --ink: #eceef2; --muted: #9aa1b1; --line: #2f3442;
+    --accent: #ff8a3d; --accent-soft: #3a2518; --blue: #6cb2ff; --blue-soft: #1a2a40; --green: #5fd38d; --green-soft: #17301f;
+    --yellow: #ffd23f; --yellow-soft: #33290f; --red: #ff6b78; --red-soft: #3a1a1f; --code-bg: #0e1015; --code-ink: #e9ebef;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14161c; --surface: #1c1f27; --surface-2: #232733; --ink: #eceef2; --muted: #9aa1b1; --line: #2f3442;
+  --accent: #ff8a3d; --accent-soft: #3a2518; --blue: #6cb2ff; --blue-soft: #1a2a40; --green: #5fd38d; --green-soft: #17301f;
+  --yellow: #ffd23f; --yellow-soft: #33290f; --red: #ff6b78; --red-soft: #3a1a1f; --code-bg: #0e1015; --code-ink: #e9ebef;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--blue); }
+code, pre, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+:not(pre) > code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre {
+  background: var(--code-bg); color: var(--code-ink); padding: 14px 16px; border-radius: 10px;
+  overflow-x: auto; line-height: 1.5; margin: 12px 0;
+}
+pre .c { color: #8a93a6; }
+h1, h2, h3, h4 { line-height: 1.2; margin: 0; }
+h2 { font-size: 1.7rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; margin-top: 28px; margin-bottom: 8px; }
+h4 { font-size: 1rem; margin-top: 18px; margin-bottom: 4px; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: .04em; }
+.table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.table-wrap table td:first-child { white-space: nowrap; }
+
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+nav.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 28px 0; font-size: 0.9rem; }
+nav.toc b { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+nav.toc a { display: flex; gap: 8px; color: var(--ink); text-decoration: none; padding: 5px 8px; border-radius: 6px; }
+nav.toc a:hover { background: var(--surface-2); }
+nav.toc a span { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 1.4em; }
+main { padding: 0 0 80px; min-width: 0; }
+
+header.hero { padding: 48px 0 20px; }
+.kicker { color: var(--accent); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: .08em; }
+header.hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); letter-spacing: -0.02em; margin: 8px 0 12px; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.meta .chip, .stage .e { white-space: normal; }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+.chip.blue { background: var(--blue-soft); color: var(--blue); }
+.chip.green { background: var(--green-soft); color: var(--green); }
+.chip.yellow { background: var(--yellow-soft); color: var(--yellow); }
+.chip.red { background: var(--red-soft); color: var(--red); }
+
+section { padding-top: 48px; }
+.sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+.sec-num { font-size: 0.85rem; font-weight: 800; color: #fff; background: var(--accent); border-radius: 8px; padding: 3px 9px; }
+.sec-sub { color: var(--muted); margin: 4px 0 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); margin: 14px 0; }
+.grid { display: grid; gap: 14px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid .card { margin: 0; }
+.card h4 { margin-top: 0; }
+.card .chip { margin-bottom: 6px; }
+
+.callout { border-left: 4px solid var(--blue); background: var(--blue-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 14px 0; }
+.callout.bb { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn { border-color: var(--yellow); background: var(--yellow-soft); }
+.callout.ok { border-color: var(--green); background: var(--green-soft); }
+.callout > b:first-child { display: block; margin-bottom: 2px; }
+
+ol.steps { list-style: none; padding: 0; counter-reset: s; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 42px; margin: 14px 0; }
+ol.steps > li::before {
+  content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--ink); color: var(--bg); font-weight: 800; font-size: 0.85rem; display: grid; place-items: center;
+}
+
+/* Roadmap infographic */
+.roadmap { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 24px 0 8px; }
+.stage { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px 14px; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); }
+.stage:hover { border-color: var(--accent); }
+.stage .n { font-weight: 800; color: var(--accent); font-size: 0.8rem; }
+.stage .t { font-weight: 700; display: block; margin: 2px 0 4px; line-height: 1.25; }
+.stage .d { color: var(--muted); font-size: 0.82rem; line-height: 1.35; display: block; }
+.stage .e { margin-top: 8px; font-size: 0.72rem; }
+.stage.adv { background: repeating-linear-gradient(135deg, var(--surface), var(--surface) 8px, var(--surface-2) 8px, var(--surface-2) 16px); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 0.82rem; }
+
+/* Port milestones */
+.milestones { display: grid; gap: 8px; margin: 14px 0; }
+.ms { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.ms .k { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--blue); font-size: 0.85rem; }
+.ms.feel .k { background: var(--accent); }
+.ms b { display: block; }
+.ms small { color: var(--muted); display: block; line-height: 1.35; }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); width: 110px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--blue); border-radius: 4px; }
+.ms.feel .bar i { background: var(--accent); }
+
+/* Diagram */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 16px 0; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 640px; height: auto; color: var(--ink); }
+.diagram .cap { color: var(--muted); font-size: 0.85rem; padding: 4px 6px 0; }
+
+/* Checklist */
+.check { list-style: none; padding: 0; }
+.check li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.check li:last-child { border-bottom: 0; }
+.check input { margin-top: 5px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.check label { cursor: pointer; }
+.check input:checked + label { color: var(--muted); text-decoration: line-through; }
+.progress { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+.progress .bar { width: 160px; }
+.progress .bar i { background: var(--green); }
+
+.bandit { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.arm { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+.arm .v { font-weight: 800; font-size: 1.1rem; }
+.arm .share { height: 70px; display: flex; align-items: flex-end; justify-content: center; margin: 6px 0; }
+.arm .share i { width: 34px; border-radius: 6px 6px 0 0; background: var(--accent); }
+.arm small { color: var(--muted); }
+
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); margin-top: 60px; padding-top: 20px; }
+.theme-btn { position: fixed; right: 16px; bottom: 16px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 0.85rem; cursor: pointer; box-shadow: var(--shadow); }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 0 16px; }
+  nav.toc { position: static; max-height: none; padding: 16px 0 0; display: none; }
+  .roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.three { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid.two { grid-template-columns: minmax(0, 1fr); }
+  .bandit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ms { grid-template-columns: 34px minmax(0, 1fr); }
+  .ms .bar { display: none; }
+  h2 { font-size: 1.4rem; }
+}
+@media print {
+  nav.toc, .theme-btn { display: none; }
+  .layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <b>Contents</b>
+  <a href="#start"><span>0</span>Before you start</a>
+  <a href="#install"><span>1</span>Install Unity</a>
+  <a href="#project"><span>2</span>Set up the project</a>
+  <a href="#github"><span>3</span>GitHub</a>
+  <a href="#claude"><span>4</span>Claude Code</a>
+  <a href="#port"><span>5</span>Port the prototype</a>
+  <a href="#assets"><span>6</span>Assets</a>
+  <a href="#publish"><span>7</span>Publishing basics</a>
+  <a href="#ads"><span>8</span>Ads</a>
+  <a href="#experiments"><span>9</span>A/B tests &amp; bandits</a>
+  <a href="#iap"><span>10</span>Store &amp; purchases</a>
+  <a href="#missed"><span>11</span>What else</a>
+  <a href="#checklist"><span>✓</span>Master checklist</a>
+  <a href="#sources"><span>↗</span>Sources</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="kicker">Bumper Block · Prototype → Unity</div>
+  <h1>Standing up Bumper Block in Unity, end to end</h1>
+  <p class="lede">This guide goes from an empty machine to a game in the stores, with optional ads, live experiments and a shop. It's written for this project: every section says what to carry over from the web prototype and what to leave behind.</p>
+  <div class="meta">
+    <span class="chip accent">Checked October 2026</span>
+    <span class="chip">Unity 6.3 LTS</span>
+    <span class="chip">Android + iOS (+ Web)</span>
+    <span class="chip yellow">Versions and prices change: check the linked docs before you commit</span>
+  </div>
+
+  <div class="roadmap" role="list" aria-label="Roadmap">
+    <a class="stage" role="listitem" href="#start"><span class="n">00</span><span class="t">Accounts</span><span class="d">Unity, GitHub, Claude, stores</span><span class="e chip">1 evening</span></a>
+    <a class="stage" role="listitem" href="#install"><span class="n">01</span><span class="t">Install Unity</span><span class="d">Hub, editor, Android/iOS modules</span><span class="e chip">1 hour</span></a>
+    <a class="stage" role="listitem" href="#project"><span class="n">02</span><span class="t">Project</span><span class="d">Universal 2D, settings that match the prototype</span><span class="e chip">1 hour</span></a>
+    <a class="stage" role="listitem" href="#github"><span class="n">03</span><span class="t">GitHub</span><span class="d">Repo, LFS, merge tool, CI</span><span class="e chip">1–2 hours</span></a>
+    <a class="stage" role="listitem" href="#claude"><span class="n">04</span><span class="t">Claude Code</span><span class="d">CLI, CLAUDE.md, the Unity plugin</span><span class="e chip">30 min</span></a>
+    <a class="stage" role="listitem" href="#port"><span class="n">05</span><span class="t">Port</span><span class="d">Nine milestones, feel first</span><span class="e chip blue">The bulk of the work</span></a>
+    <a class="stage" role="listitem" href="#assets"><span class="n">06</span><span class="t">Assets</span><span class="d">Art, audio, fonts, licenses</span><span class="e chip">Ongoing</span></a>
+    <a class="stage" role="listitem" href="#publish"><span class="n">07</span><span class="t">Publish</span><span class="d">Build Profiles, Play, App Store, Web</span><span class="e chip">1–2 weeks of setup and review</span></a>
+    <a class="stage adv" role="listitem" href="#ads"><span class="n">08–10</span><span class="t">Grow</span><span class="d">Ads, A/B tests, bandits, shop</span><span class="e chip yellow">After launch-ready</span></a>
+    <a class="stage adv" role="listitem" href="#missed"><span class="n">11</span><span class="t">What else</span><span class="d">Analytics, saves, privacy, accessibility…</span><span class="e chip">Before launch</span></a>
+  </div>
+  <div class="legend"><span>Time estimates are rough, for one person working part-time.</span><span>Striped tiles: optional or later.</span></div>
+</header>
+
+<!-- ============================================================ -->
+<section id="start">
+  <div class="sec-head"><span class="sec-num">00</span><h2>Before you start: accounts and costs</h2></div>
+  <p class="sec-sub">Set up the accounts first. Store accounts in particular can take days to be verified.</p>
+
+  <div class="table-wrap"><table>
+    <tr><th>Account</th><th>Cost</th><th>Needed for</th><th>Notes</th></tr>
+    <tr><td><b>Unity ID</b> (Unity Personal)</td><td>Free</td><td>Editor, Hub, Unity Gaming Services</td><td>Personal is for up to <b>$200K</b> of revenue <i>and</i> funding over the last 12 months. With Unity 6, the Unity splash screen is optional on Personal. Pro is listed from about $2,310/yr.</td></tr>
+    <tr><td><b>GitHub</b></td><td>Free</td><td>Source control, CI, Claude Code on the web</td><td>The Git LFS quota on free accounts is small. Check GitHub's billing page before committing lots of art.</td></tr>
+    <tr><td><b>Claude</b> (Pro/Max, or API)</td><td>Subscription</td><td>Claude Code locally, on the web, and in GitHub</td><td>You already use it for this repo.</td></tr>
+    <tr><td><b>Google Play Console</b></td><td>$25 once</td><td>Android release</td><td>Needs identity verification. New <i>personal</i> accounts must run a closed test with a minimum number of testers for 14 days before going to production. Check the current tester count.</td></tr>
+    <tr><td><b>Apple Developer Program</b></td><td>$99 / year</td><td>iOS release, TestFlight</td><td>iOS builds need a <b>Mac with Xcode 26</b> (required for App Store uploads since April 28, 2026), or a cloud Mac (see Build Automation).</td></tr>
+    <tr><td><b>Unity Dashboard project</b></td><td>Free tiers</td><td>Remote Config, Analytics, IAP, LevelPlay, Build Automation</td><td>Each service has its own free allowance. Usage beyond it is billed.</td></tr>
+  </table></div>
+
+  <div class="callout bb"><b>For Bumper Block</b>Keep this repo (<code>ventiduke/bumperblock</code>) and its GitHub Pages build exactly as they are. They're your feel reference. Put the Unity game in a <b>new</b> repo, e.g. <code>bumperblock-unity</code>, and link the two in each README.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="install">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Install Unity</h2></div>
+  <p class="sec-sub">Unity Hub manages editor versions, modules and licenses. Install the Hub first, then the editor through it.</p>
+  <ol class="steps">
+    <li><b>Download Unity Hub</b> from <a href="https://unity.com/download">unity.com/download</a> and sign in with your Unity ID. On first launch, the Hub offers to activate a <b>Personal</b> license. Accept it.</li>
+    <li><b>Install an editor:</b> go to <i>Installs → Install Editor</i> and pick the newest <b>Unity 6.3 LTS</b> (6000.3.x, supported until December 2027).
+      <div class="callout"><b>LTS or the newest release?</b>Newer "Supported" releases such as 6.6 get updates until the next one ships. LTS versions get two years of fixes. Ship on LTS, and only move up when the next LTS (6.7, expected late 2026) has had a few patches.</div></li>
+    <li><b>Tick these modules</b> (you can add more later from the editor's gear menu):
+      <ul>
+        <li><b>Android Build Support</b>, including OpenJDK and the Android SDK &amp; NDK tools</li>
+        <li><b>iOS Build Support</b> (only installable on a Mac)</li>
+        <li><b>Web Build Support</b> (optional): lets you keep a browser build for quick playtests, like the prototype</li>
+        <li><b>Documentation</b> (an offline manual, useful on planes)</li>
+      </ul></li>
+    <li><b>Pick a code editor:</b> <b>VS Code</b> (free) with the <i>Unity</i> extension, <b>JetBrains Rider</b> (free for non-commercial use), or <b>Visual Studio</b>. In Unity, set it under <i>Settings → External Tools</i>. Claude Code works alongside any of them.</li>
+    <li><b>Disk space:</b> each editor plus its modules takes tens of GB. Keep projects on an SSD.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="project">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Set up the project</h2></div>
+  <p class="sec-sub">Create the project, then set it up to match the prototype, so the first drive feels familiar.</p>
+
+  <ol class="steps">
+    <li><b>New project → <i>Universal 2D</i></b> (URP with the 2D Renderer). Name it <code>BumperBlock</code>. If you'll use Unity services, tick <i>Connect to Unity Cloud</i>.</li>
+    <li><b>Version-control-friendly settings:</b> under <i>Project Settings → Editor</i>, set <b>Asset Serialization = Force Text</b> and make sure <b>.meta files are visible</b> (the default in Unity 6). Scenes and prefabs then become YAML that Git can diff and merge.</li>
+    <li><b>Player settings:</b> company name, product name <i>Bumper Block</i>, package name <code>com.&lt;you&gt;.bumperblock</code>. Set <b>Default Orientation</b> to <i>Auto Rotation</i>, with only <i>Landscape Left</i> and <i>Landscape Right</i> allowed. The prototype is landscape-only.</li>
+    <li><b>Physics 2D</b>, to start where the prototype ended:
+      <div class="table-wrap"><table>
+        <tr><th>Setting</th><th>Prototype value</th><th>Where in Unity</th></tr>
+        <tr><td>Gravity</td><td>0, 0 (top-down)</td><td>Project Settings → Physics 2D</td></tr>
+        <tr><td>Step rate</td><td>60 Hz</td><td>Project Settings → Time → Fixed Timestep = 0.0166667</td></tr>
+        <tr><td>Solver iterations</td><td>velocity 8, position 3</td><td>Physics 2D → Velocity / Position Iterations</td></tr>
+        <tr><td>Units</td><td>meters; car 1.8 × 1.0; arena 40 × 24</td><td>1 Unity unit = 1 m. Sprites: Pixels Per Unit to suit your art</td></tr>
+        <tr><td>Damping, restitution, friction</td><td>see <code>config.js</code></td><td><code>Rigidbody2D.linearDamping</code>, a Physics Material 2D</td></tr>
+      </table></div></li>
+    <li><b>Input System:</b> Unity 6 uses the new Input System by default. Make one <i>Input Actions</i> asset with <code>Steer</code>, <code>Brake</code>, <code>Boost</code>, <code>Ability</code>, <code>Cycle</code> and <code>Select1–3</code>, bound to touch (screen halves, buttons) and keyboard (A/D, S, Space, F, Q, 1/2/3). The keys match the prototype.</li>
+    <li><b>Folder layout</b> (one suggestion):
+<pre>Assets/
+  _Project/
+    Scripts/      <span class="c"># Driving/ Matching/ Damage/ AI/ Abilities/ Weather/ UI/ Audio/</span>
+    Config/       <span class="c"># ScriptableObjects: the config.js values, one per system</span>
+    Prefabs/      <span class="c"># PlayerCar, Car, Motorcycle, Bus, Semi, Police, Junk</span>
+    Scenes/       <span class="c"># Boot, Game, (Menu)</span>
+    Art/ Audio/ Fonts/
+  Plugins/        <span class="c"># third-party SDKs</span>
+Tests/
+  EditMode/ PlayMode/   <span class="c"># Unity Test Framework: ports of tests/*.test.mjs</span></pre></li>
+  </ol>
+  <div class="callout bb"><b>For Bumper Block: turn <code>config.js</code> into ScriptableObjects</b>Make one asset per system (<code>DrivingConfig</code>, <code>MatchConfig</code>, <code>DamageConfig</code>, <code>WeatherPreset</code>…), filled with the prototype's values. Designers can then tune in the Inspector, and later the same fields can be overridden remotely (see <a href="#experiments">A/B tests</a>).</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="github">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Hooking up GitHub</h2></div>
+  <p class="sec-sub">Yes, this works. Unity Hub has no "connect GitHub" button, so you use Git directly (or GitHub Desktop) and set up three files.</p>
+
+  <div class="grid two">
+    <div class="card"><span class="chip green">Recommended</span><h4>Git + GitHub</h4><p>Works with Claude Code everywhere, including cloud sessions like the ones that built the prototype. GitHub Actions can build and test the game. Large binaries go through Git LFS.</p></div>
+    <div class="card"><span class="chip">Alternative</span><h4>Unity Version Control (Plastic)</h4><p>Built for big binary assets, with file locking for artists. Since March 2026 there's no per-seat charge for cloud hosting, and the first 100 GB a month is free. It's less convenient with Claude Code and GitHub-based tooling.</p></div>
+  </div>
+
+  <ol class="steps">
+    <li><b>Create the repo</b> on GitHub (<code>bumperblock-unity</code>, private). Initialize it <b>without</b> a README so the first push is clean.</li>
+    <li><b>Add a <code>.gitignore</code></b> at the project root (the folder that contains <code>Assets/</code>). Start from GitHub's maintained template: <a href="https://github.com/github/gitignore/blob/main/Unity.gitignore">github/gitignore → Unity.gitignore</a>. It ignores <code>Library/</code>, <code>Temp/</code>, <code>Obj/</code>, <code>Logs/</code>, <code>UserSettings/</code>, <code>Build*/</code> and IDE files.</li>
+    <li><b>Add <code>.gitattributes</code></b> for LFS and Unity's merge tool:
+<pre><span class="c"># Unity YAML: merge with UnityYAMLMerge (SmartMerge)</span>
+*.unity  merge=unityyamlmerge eol=lf
+*.prefab merge=unityyamlmerge eol=lf
+*.asset  merge=unityyamlmerge eol=lf
+*.mat    merge=unityyamlmerge eol=lf
+*.anim   merge=unityyamlmerge eol=lf
+<span class="c"># Big binaries: Git LFS</span>
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.ttf  filter=lfs diff=lfs merge=lfs -text
+*.fbx  filter=lfs diff=lfs merge=lfs -text</pre></li>
+    <li><b>Register the merge tool</b> once per machine. UnityYAMLMerge ships inside the editor's <code>Data/Tools</code> folder, so adjust the path to your install:
+<pre>git config --global merge.unityyamlmerge.name "Unity SmartMerge"
+git config --global merge.unityyamlmerge.driver \
+  '"/Applications/Unity/Hub/Editor/6000.3.x/Unity.app/Contents/Tools/UnityYAMLMerge" merge -p %O %B %A %A'</pre></li>
+    <li><b>First commit and push:</b>
+<pre>cd BumperBlock
+git init -b main
+git lfs install
+git add .gitignore .gitattributes
+git add .
+git commit -m "Empty Universal 2D project"
+git remote add origin https://github.com/&lt;you&gt;/bumperblock-unity.git
+git push -u origin main</pre></li>
+    <li><b>CI (optional, recommended):</b> <a href="https://game.ci">GameCI</a> provides GitHub Actions (<code>game-ci/unity-test-runner</code>, <code>game-ci/unity-builder</code>) that run your tests and build Android/Web on every push. Follow its <i>Activation</i> guide; Personal and Pro licenses are set up differently. The Unity-native option is <b>Unity Build Automation</b>, which connects to the GitHub repo. Its free monthly allowance is about 200 Windows minutes and 100 Mac minutes, and it can make iOS builds without your own Mac.</li>
+  </ol>
+  <div class="callout warn"><b>Scenes and merges</b>Even with SmartMerge, two people (or two Claude sessions) editing the same scene will collide. Keep scenes thin: build the game from prefabs and code, and spawn things at runtime the way the prototype does.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="claude">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Hooking up Claude Code</h2></div>
+  <p class="sec-sub">There are three levels of connection. Each is useful on its own, and you can stack them.</p>
+
+  <div class="diagram" role="img" aria-label="How the pieces connect: your machine runs the Unity Editor, Claude Code and Git; GitHub hosts the repo and CI; Unity Cloud provides builds and live services; builds go to the stores.">
+    <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" font-size="13">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" opacity=".55"/></marker>
+      </defs>
+      <!-- machine -->
+      <rect x="10" y="20" width="250" height="260" rx="14" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+      <text x="26" y="44" font-weight="700">Your computer</text>
+      <rect x="26" y="60" width="218" height="54" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+      <text x="40" y="83" font-weight="700" fill="var(--accent)">Unity Editor</text>
+      <text x="40" y="102" fill="currentColor" opacity=".7">scenes, play mode, profiler</text>
+      <rect x="26" y="126" width="218" height="66" rx="10" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <text x="40" y="149" font-weight="700" fill="var(--blue)">Claude Code</text>
+      <text x="40" y="168" fill="currentColor" opacity=".7">edits C#, runs tests,</text>
+      <text x="40" y="184" fill="currentColor" opacity=".7">drives the editor (plugin/MCP)</text>
+      <rect x="26" y="204" width="218" height="54" rx="10" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".3"/>
+      <text x="40" y="227" font-weight="700">Git + LFS</text>
+      <text x="40" y="246" fill="currentColor" opacity=".7">project folder = repo</text>
+      <path d="M135 126 V116" stroke="currentColor" stroke-opacity=".55" marker-end="url(#ar)"/>
+      <!-- github -->
+      <rect x="300" y="20" width="220" height="120" rx="14" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+      <text x="316" y="44" font-weight="700">GitHub</text>
+      <text x="316" y="68" fill="currentColor" opacity=".75">bumperblock-unity repo</text>
+      <text x="316" y="88" fill="currentColor" opacity=".75">Actions: GameCI tests + builds</text>
+      <text x="316" y="108" fill="currentColor" opacity=".75">Claude Code on the web / PRs</text>
+      <text x="316" y="128" fill="currentColor" opacity=".55">bumperblock (prototype, reference)</text>
+      <!-- unity cloud -->
+      <rect x="300" y="160" width="220" height="120" rx="14" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+      <text x="316" y="184" font-weight="700">Unity Cloud &amp; services</text>
+      <text x="316" y="208" fill="currentColor" opacity=".75">Build Automation</text>
+      <text x="316" y="228" fill="currentColor" opacity=".75">Remote Config · Game Overrides</text>
+      <text x="316" y="248" fill="currentColor" opacity=".75">Analytics · IAP · Economy</text>
+      <text x="316" y="268" fill="currentColor" opacity=".75">LevelPlay (ads)</text>
+      <!-- stores -->
+      <rect x="560" y="20" width="250" height="260" rx="14" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+      <text x="576" y="44" font-weight="700">Players</text>
+      <rect x="576" y="60" width="218" height="54" rx="10" fill="var(--green-soft)" stroke="var(--green)"/>
+      <text x="590" y="83" font-weight="700" fill="var(--green)">Google Play</text>
+      <text x="590" y="102" fill="currentColor" opacity=".7">AAB · internal → closed → prod</text>
+      <rect x="576" y="126" width="218" height="54" rx="10" fill="var(--green-soft)" stroke="var(--green)"/>
+      <text x="590" y="149" font-weight="700" fill="var(--green)">App Store</text>
+      <text x="590" y="168" fill="currentColor" opacity=".7">Xcode 26 · TestFlight → review</text>
+      <rect x="576" y="192" width="218" height="54" rx="10" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".3"/>
+      <text x="590" y="215" font-weight="700">Web build (optional)</text>
+      <text x="590" y="234" fill="currentColor" opacity=".7">itch.io / Pages playtests</text>
+      <!-- arrows -->
+      <path d="M260 230 C 280 230, 280 90, 298 90" fill="none" stroke="currentColor" stroke-opacity=".55" marker-end="url(#ar)"/>
+      <text x="262" y="160" fill="currentColor" opacity=".6" font-size="11">push</text>
+      <path d="M410 140 V158" stroke="currentColor" stroke-opacity=".55" marker-end="url(#ar)"/>
+      <path d="M520 80 H574" stroke="currentColor" stroke-opacity=".55" marker-end="url(#ar)"/>
+      <path d="M520 220 C 545 220, 545 150, 574 150" fill="none" stroke="currentColor" stroke-opacity=".55" marker-end="url(#ar)"/>
+      <path d="M574 260 C 540 290, 330 300, 300 276" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+      <text x="420" y="296" fill="currentColor" opacity=".6" font-size="11">live config, analytics, purchases</text>
+    </svg>
+    <div class="cap">How the pieces connect. Code goes up through GitHub, builds go out to the stores, and live services talk to the running game.</div>
+  </div>
+
+  <h3>Level 1: Claude Code in the project folder</h3>
+  <p>This works on day one, with nothing Unity-specific installed. Claude reads and writes C#, Unity recompiles when you switch back to the editor, and Claude can run tests from the command line.</p>
+<pre><span class="c"># macOS / Linux / WSL</span>
+curl -fsSL https://claude.ai/install.sh | bash
+<span class="c"># Windows PowerShell</span>
+irm https://claude.ai/install.ps1 | iex
+
+cd BumperBlock
+claude            <span class="c"># then type /init to generate a CLAUDE.md</span></pre>
+  <p>Give it the prototype as reference by cloning it next to the project. Read-only is fine:</p>
+<pre>git clone https://github.com/ventiduke/bumperblock.git ../bumperblock-prototype</pre>
+  <p>Then make <code>CLAUDE.md</code> point at it. A starting version:</p>
+<pre># Bumper Block (Unity)
+Unity 6.3 LTS, URP 2D, C#. Port of the web prototype at ../bumperblock-prototype
+(live: https://ventiduke.github.io/bumperblock/).
+
+- Read ../bumperblock-prototype/docs/unity-handoff.md before changing gameplay.
+  Keep each system's *intent*; the prototype's mechanism and numbers are a baseline, not a spec.
+- Tuning lives in ScriptableObjects under Assets/_Project/Config (ported from config.js).
+  Never hard-code a tuning number in a script.
+- Physics: Rigidbody2D, gravity 0, Fixed Timestep 1/60. Per-step forces in FixedUpdate only.
+- Tests: Unity Test Framework in Tests/. Port the matching tests/*.test.mjs checks
+  when you port a system. Run:
+  Unity -batchmode -projectPath . -runTests -testPlatform PlayMode -testResults results.xml
+- Keep scenes thin; spawn from prefabs in code to avoid scene merge conflicts.</pre>
+
+  <h3>Level 2: Unity's official plugin for Claude Code</h3>
+  <p>Unity publishes a Claude Code plugin with Unity-written <b>skills</b> (engine know-how) plus support for the <b>Unity CLI</b>, so Claude can drive the editor: create objects, run builds, read the console. Install it from inside a Claude Code session:</p>
+<pre>/plugin marketplace add Unity-Technologies/unity-agent-plugin
+/plugin install unity@unity-agent-plugin</pre>
+  <p>The skills that control the editor need three things: the Unity CLI installed, the <b>Pipeline</b> package in the project (<code>unity pipeline install</code>), and the editor open. Unity's AI pieces are moving quickly, so follow <a href="https://docs.unity.com/en-us/ai/unity-plugin/claude-code">Unity's plugin page</a> for the current steps.</p>
+
+  <h3>Level 3: Unity MCP (live editor access)</h3>
+  <p>An MCP server gives Claude live access to the open project: scenes, GameObjects, console output and build settings.</p>
+  <div class="grid two">
+    <div class="card"><span class="chip blue">Official</span><h4>Unity MCP (AI Assistant package)</h4><p>Needs Unity 6+, a project connected to Unity Cloud, and access to Unity's AI tools (a trial or subscription). Set it up from the AI Assistant's <i>Integrations</i> panel, which can configure Claude Code for you. Unity is moving MCP features into the Unity CLI, so check which route is current.</p></div>
+    <div class="card"><span class="chip">Community, free</span><h4>Open-source MCP servers</h4><p>For example <a href="https://github.com/CoplayDev/unity-mcp">CoplayDev/unity-mcp</a>, <a href="https://github.com/CoderGamester/mcp-unity">CoderGamester/mcp-unity</a> and <a href="https://github.com/IvanMurzak/Unity-MCP">IvanMurzak/Unity-MCP</a>. They're no-cost, and quality varies. Read the code before you give one access to your editor.</p></div>
+  </div>
+  <div class="callout ok"><b>Cloud vs. local</b>Claude Code on the web (like the sessions that built the prototype) is great for C# changes, tests that run in batch mode on CI, docs and reviews. It can't open the Unity Editor. Anything visual, such as scenes, feel, or play mode, happens locally on your machine.</div>
+
+  <h4>Prompts that work well for a port</h4>
+  <ul>
+    <li>"Port <code>js/physics.js</code> and <code>js/player.js</code> to a <code>CarController</code> MonoBehaviour plus a <code>DrivingConfig</code> ScriptableObject. Match the grip/drive/steer model in the handoff §3.1, and port the brake and reverse checks from <code>tests/core.test.mjs</code> as PlayMode tests."</li>
+    <li>"Compare our <code>MatchSystem</code> against <code>js/match.js</code>: list every behavior in the prototype that we don't have yet."</li>
+    <li>"Write an editor window that shows the live values of the current level's configs, like the prototype's <code>?debug=1</code> overlay."</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="port">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Port the prototype: feel first</h2></div>
+  <p class="sec-sub">Build in the order the playtests did: driving, then the crowd, then matching, then pressure. Don't move to the next milestone until the current one feels like the web build, played side by side on the same phone.</p>
+
+  <div class="milestones">
+    <div class="ms feel"><div class="k">M1</div><div><b>Driving feel</b><small><code>physics.js</code>, <code>player.js</code> → CarController: capped lateral grip, forward drive, near-direct angular velocity, brake and reverse, boost. Camera follow with look-ahead.</small></div><div class="bar"><i style="width:70%"></i></div></div>
+    <div class="ms feel"><div class="k">M2</div><div><b>Crowd and collisions</b><small><code>ai.js</code>, <code>spawner.js</code> → wander, wall avoidance, stun on hard hits, spawning from the edges. The "weighty bumps" feel (§3.2).</small></div><div class="bar"><i style="width:60%"></i></div></div>
+    <div class="ms feel"><div class="k">M3</div><div><b>Chain matching</b><small><code>match.js</code>, <code>effects.js</code> → trigger colliders, union-find, player as a wildcard link, countdown, explosion shove, particles.</small></div><div class="bar"><i style="width:65%"></i></div></div>
+    <div class="ms"><div class="k">M4</div><div><b>Pressure</b><small><code>damage.js</code>, <code>pileup.js</code>, stuck detection → fault-based damage, squeeze, repair windows, rust and junk, boxed-in.</small></div><div class="bar"><i style="width:55%"></i></div></div>
+    <div class="ms"><div class="k">M5</div><div><b>Levels and HUD</b><small><code>levels.js</code>, <code>hud.js</code> → goals, stars, results screen, toasts, minimap (a second camera or a RenderTexture).</small></div><div class="bar"><i style="width:45%"></i></div></div>
+    <div class="ms"><div class="k">M6</div><div><b>Vehicles and police</b><small>Motorcycle, bus, semi (HingeJoint2D), police chase and ram with skid, convoy bonus.</small></div><div class="bar"><i style="width:50%"></i></div></div>
+    <div class="ms"><div class="k">M7</div><div><b>Abilities and upgrades</b><small><code>abilities.js</code>, <code>upgrades.js</code> → chameleon, phase (layer matrix), tow (DistanceJoint2D), the card draft, run summary.</small></div><div class="bar"><i style="width:50%"></i></div></div>
+    <div class="ms"><div class="k">M8</div><div><b>Terrain and weather</b><small><code>terrain.js</code>, <code>weather.js</code> → surface zones, puddles, wind drift, lightning. Visuals become particle systems and 2D lights.</small></div><div class="bar"><i style="width:55%"></i></div></div>
+    <div class="ms"><div class="k">M9</div><div><b>Sound and feel</b><small><code>audio.js</code> → real sound design (an AudioMixer and snapshots), hitstop, skid marks, haptics (now iOS too).</small></div><div class="bar"><i style="width:40%"></i></div></div>
+  </div>
+  <p class="legend"><span>Bar = rough relative effort.</span><span>Orange = feel-critical: play-test on a phone before moving on.</span></p>
+
+  <div class="table-wrap"><table>
+    <tr><th>Prototype piece</th><th>Unity equivalent</th></tr>
+    <tr><td>Planck body + damping</td><td><code>Rigidbody2D</code> with <code>linearDamping</code> / <code>angularDamping</code></td></tr>
+    <tr><td>Grip / drive / steer per step</td><td><code>FixedUpdate</code>: <code>AddForce</code>, impulses, set <code>angularVelocity</code></td></tr>
+    <tr><td>Sensor fixture (+0.14 m) for "touching"</td><td>Child <code>BoxCollider2D</code> with <code>isTrigger</code>, slightly larger</td></tr>
+    <tr><td>Pre-solve closing speeds (fault)</td><td><code>OnCollisionEnter2D</code>: <code>relativeVelocity</code>, contact normals</td></tr>
+    <tr><td>Post-solve impulse</td><td><code>ContactPoint2D.normalImpulse</code></td></tr>
+    <tr><td>Phase collision masks</td><td>Physics 2D layer collision matrix, or <code>Physics2D.IgnoreLayerCollision</code></td></tr>
+    <tr><td>Semi hinge / tow rope</td><td><code>HingeJoint2D</code> with limits / <code>DistanceJoint2D</code> (max distance only)</td></tr>
+    <tr><td><code>config.js</code></td><td>ScriptableObjects (and Remote Config keys later)</td></tr>
+    <tr><td>Canvas rendering, darkness layer</td><td>Sprites, URP 2D Lights (Light2D for floodlights, headlights, light bars), particle systems</td></tr>
+    <tr><td><code>tests/*.test.mjs</code> via <code>window.bumper</code></td><td>Unity Test Framework PlayMode tests that drive a test scene through a debug API</td></tr>
+  </table></div>
+  <div class="callout bb"><b>For Bumper Block</b>The handoff doc lists the traps we already hit: sensors blocking matches, fattened AABBs blocking spawns, a pinned player freezing, flat impact damage punishing your own rams, cops stunning themselves. Hand §4 "Lessons learned" to Claude before each milestone.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="assets">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Getting assets</h2></div>
+  <p class="sec-sub">Start with placeholders that read well (the prototype's flat shapes are a fine start), then upgrade in passes. Keep a record of every asset's license from day one.</p>
+  <div class="grid three">
+    <div class="card"><span class="chip">Art</span><h4>Sprites and VFX</h4><ul><li><a href="https://assetstore.unity.com">Unity Asset Store</a>: buy it, then it's in <i>Package Manager → My Assets</i></li><li><a href="https://kenney.nl/assets">Kenney</a>: CC0 top-down car and racing packs, ideal for a first pass</li><li><a href="https://itch.io/game-assets">itch.io game assets</a></li><li>A commissioned artist for the final look and player car <b>skins</b></li></ul></div>
+    <div class="card"><span class="chip">Audio</span><h4>SFX and music</h4><ul><li>Kenney audio packs (CC0)</li><li><a href="https://freesound.org">Freesound</a>: licenses vary per sound, so check each one</li><li>The prototype's synth sounds work as a <i>spec</i>: each event and how it should feel</li><li>Horns and engine sounds per vehicle type from a sound library or a sound designer</li></ul></div>
+    <div class="card"><span class="chip">Type and UI</span><h4>Fonts and UI kits</h4><ul><li><a href="https://fonts.google.com">Google Fonts</a> (mostly OFL, safe to embed)</li><li>Unity UI Toolkit or uGUI. Build the HUD to scale with the screen and respect safe areas (notches).</li></ul></div>
+  </div>
+  <div class="callout warn"><b>License hygiene</b>Add <code>CREDITS.md</code> to the repo, with each asset's source, author, license and URL. Store reviews and publishers ask for this. If you use AI-generated art or audio, check the tool's commercial terms and each store's current disclosure rules.</div>
+  <div class="callout bb"><b>For Bumper Block: readability first</b>Six colors, five vehicle types, junk and weather all share one phone screen. Give each color a shape or pattern as well (colorblind support), keep sprites top-down and high-contrast, and test every art pass at night and in fog, where readability suffers most.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="publish">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Publishing basics (Unity-native first)</h2></div>
+  <p class="sec-sub">Unity 6 manages platforms with <b>Build Profiles</b> (<i>File → Build Profiles</i>). Make one per platform, plus a "Dev" profile with development build and profiler on.</p>
+
+  <div class="grid two">
+    <div class="card"><span class="chip green">Android</span><h4>Google Play</h4>
+      <ol>
+        <li>Build Profiles → Android → <b>Switch Platform</b>.</li>
+        <li>Player Settings: <b>IL2CPP</b>, <b>ARM64</b>. Target API level must be <b>36 (Android 16)</b> or higher for new apps and updates since <b>Aug 31, 2026</b>.</li>
+        <li>Create a <b>keystore</b> in <i>Publishing Settings</i>. Back it up somewhere safe; with Play App Signing, Google holds the release key.</li>
+        <li>Tick <b>Build App Bundle (AAB)</b> and build.</li>
+        <li>Play Console: create the app, then fill in the store listing, content rating (IARC), <b>Data safety</b> form, privacy policy URL, and target audience.</li>
+        <li>Upload to <b>Internal testing</b>, then closed testing (required for new personal accounts), then production.</li>
+      </ol></div>
+    <div class="card"><span class="chip green">iOS</span><h4>App Store</h4>
+      <ol>
+        <li>Build Profiles → iOS. Unity exports an <b>Xcode project</b>.</li>
+        <li>Open it in <b>Xcode 26+</b> (required for uploads since Apr 28, 2026), and set signing to your team.</li>
+        <li><i>Product → Archive</i>, then upload to App Store Connect.</li>
+        <li>Test with <b>TestFlight</b> (internal testers right away; external testers after a light review).</li>
+        <li>Fill in the App Privacy "nutrition labels", age rating and screenshots, then submit for review.</li>
+        <li>No Mac? <b>Unity Build Automation</b> can build and sign in the cloud. You still need the Apple Developer account and certificates.</li>
+      </ol></div>
+  </div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><span class="chip">Web</span><h4>Keep a browser build</h4><p>A Web build profile gives playtesters a link, like the prototype's GitHub Pages. Host it on <a href="https://itch.io">itch.io</a> (free, with a password option) or Pages. Mobile browsers are a weaker target for Unity than native, so use it for desktop playtests.</p></div>
+    <div class="card"><span class="chip">Automation</span><h4>Unity Build Automation</h4><p>Connects to your GitHub repo, builds on push, and can deliver to TestFlight and Play. It's Unity's native answer to CI for builds, and pairs with GameCI for tests on GitHub Actions.</p></div>
+  </div>
+  <div class="callout"><b>Release hygiene</b>Bump <i>Version</i> (shown to players) and <i>Bundle Version Code / Build</i> (must always increase) on every upload. Tag releases in Git, which gives you the <code>prototype-v1</code> habit for free.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ads">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Advanced: ads</h2><span class="chip yellow">After the game is fun</span></div>
+  <p class="sec-sub">Unity's ad stack is now <b>LevelPlay</b>, its mediation platform. As of Jan 31, 2026, Unity Ads no longer supports direct SDK integration through the old Advertisement Legacy package. Unity Ads runs through LevelPlay, with in-app bidding.</p>
+  <ol class="steps">
+    <li>Install <b>Ads Mediation (LevelPlay)</b> from the Package Manager, and create the app in the LevelPlay dashboard.</li>
+    <li>Add networks under <i>Mediation → Setup → SDK Networks</i>, starting with Unity Ads. The auto-setup tool creates the placements.</li>
+    <li>Integrate one ad format at a time. Start with <b>rewarded</b>.</li>
+    <li>Handle consent before showing ads: GDPR/UMP in Europe, <b>App Tracking Transparency</b> on iOS, and COPPA if children might play.</li>
+  </ol>
+  <div class="table-wrap"><table>
+    <tr><th>Format</th><th>Where it fits in Bumper Block</th><th>Guardrail</th></tr>
+    <tr><td><span class="chip green">Rewarded</span></td><td>"Wrecked! Watch to repair and keep going" (once per level), "double the level bonus", or a free upgrade re-roll</td><td>Always optional, never mid-match</td></tr>
+    <tr><td><span class="chip yellow">Interstitial</span></td><td>Between levels, after the card pick</td><td>Frequency cap (e.g. every 2–3 levels, none in the first session); a natural A/B test</td></tr>
+    <tr><td><span class="chip red">Banner</span></td><td>Avoid during play: it covers HUD and touch areas</td><td>Results screen only, if at all</td></tr>
+  </table></div>
+  <div class="callout"><b>"Remove ads" pairs with this</b>A one-time purchase that turns off interstitials (and keeps rewarded ads optional) is usually the most-bought item in games like this. See <a href="#iap">Store &amp; purchases</a>.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="experiments">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Advanced: A/B tests and bandit-style tuning</h2></div>
+  <p class="sec-sub">This is where turning <code>config.js</code> into ScriptableObjects pays off. Expose the numbers you're unsure about as remote keys, then let real players decide.</p>
+
+  <h3>The plumbing (Unity-native)</h3>
+  <ol class="steps">
+    <li><b>Remote Config:</b> key/value settings fetched at startup and cached, with your ScriptableObject value as the fallback. Example keys: <code>police_cap_level3</code>, <code>repair_on_time</code>, <code>snow_grip</code>, <code>interstitial_every</code>.</li>
+    <li><b>Game Overrides:</b> server-side rules that change Remote Config values for an audience, with a built-in <b>A/B test</b> that splits players into variants. No extra SDK; it's configured in the Dashboard (or as code with the Deployment package).</li>
+    <li><b>Analytics:</b> send the events that decide the test (below), and compare variants in the Dashboard.</li>
+  </ol>
+<pre><span class="c">// Sketch: apply remote values over the ScriptableObject defaults at boot.</span>
+await UnityServices.InitializeAsync();
+await AuthenticationService.Instance.SignInAnonymouslyAsync();
+await RemoteConfigService.Instance.FetchConfigsAsync(new UserAttributes(), new AppAttributes());
+var rc = RemoteConfigService.Instance.appConfig;
+damage.repairOnTime   = rc.GetFloat("repair_on_time", damage.repairOnTime);
+levels[2].policeCap   = rc.GetInt("police_cap_level3", levels[2].policeCap);
+weather.snow.grip     = rc.GetFloat("snow_grip", weather.snow.grip);</pre>
+
+  <h3>What to measure</h3>
+  <p>The prototype's run summary is already the right event list:</p>
+  <ul>
+    <li><code>level_start</code> and <code>level_complete</code> (time, stars, health left)</li>
+    <li><code>level_fail</code> (wrecked or boxed in, plus the top damage source)</li>
+    <li><code>card_picked</code></li>
+    <li><code>ability_used</code></li>
+    <li><code>ad_watched</code></li>
+    <li><code>purchase</code></li>
+    <li>session length and D1/D7 retention</li>
+  </ul>
+  <p>Pick <b>one</b> primary metric per test (e.g. "level 3 completion rate" or "D7 retention") before you start it.</p>
+
+  <h3>A/B test or bandit?</h3>
+  <div class="grid two">
+    <div class="card"><span class="chip blue">A/B test</span><h4>"Is B better than A?"</h4><p>Fixed split, run to a planned sample size, then decide. Best for <b>decisions</b> you'll live with: does the police cap on level 3 hurt completion? Does an interstitial every 2 levels hurt D7?</p></div>
+    <div class="card"><span class="chip accent">Multi-armed bandit</span><h4>"Keep finding the best value"</h4><p>Traffic shifts toward the variants that are winning while the test runs, so fewer players get a bad experience. Best for <b>ongoing tuning</b> with several candidate values: repair window length, ad frequency, a starting-health curve.</p></div>
+  </div>
+
+  <div class="bandit" aria-label="Bandit illustration: traffic share by arm after a week">
+    <div class="arm"><div class="v">14 s</div><div class="share"><i style="height:18%"></i></div><small>repair window</small></div>
+    <div class="arm"><div class="v">18 s</div><div class="share"><i style="height:62%"></i></div><small>current default</small></div>
+    <div class="arm"><div class="v">22 s</div><div class="share"><i style="height:100%"></i></div><small>winning → most traffic</small></div>
+    <div class="arm"><div class="v">26 s</div><div class="share"><i style="height:30%"></i></div><small>too easy, falls off</small></div>
+  </div>
+  <p class="legend"><span>Illustration only: a bandit moves players toward the arm with the best reward (e.g. level completion) while it keeps exploring.</span></p>
+
+  <h4>Ways to run a bandit</h4>
+  <ul>
+    <li><b>Firebase Remote Config Personalization</b> (off the shelf). It uses a <b>contextual multi-armed bandit</b> to pick, for each player, one of up to five alternative values, optimizing a Google Analytics event you choose. It works with the Firebase Unity SDK and can run alongside Unity services.</li>
+    <li><b>Do it yourself on Unity Gaming Services:</b>
+      <ul>
+        <li>Store a success and failure count per arm (Cloud Save, or your own small backend).</li>
+        <li>A <b>Cloud Code</b> function picks each player's arm by Thompson sampling.</li>
+        <li>The game reports the outcome back.</li>
+      </ul>
+      More work, full control:
+<pre><span class="c">// Thompson sampling: draw from each arm's Beta(successes+1, failures+1); serve the highest draw.</span>
+int PickArm(Arm[] arms) {
+  int best = 0; double bestDraw = -1;
+  for (int i = 0; i &lt; arms.Length; i++) {
+    double draw = SampleBeta(arms[i].wins + 1, arms[i].losses + 1);
+    if (draw &gt; bestDraw) { bestDraw = draw; best = i; }
+  }
+  return best;  <span class="c">// assign once per player (sticky), report win/loss at level end</span>
+}</pre></li>
+  </ul>
+  <div class="callout warn"><b>Guardrails</b>
+    <ul>
+      <li>Keep each player's assignment sticky (same variant every session).</li>
+      <li>Bound every arm to values you'd be happy to ship.</li>
+      <li>Never optimize monetization alone. Watch retention alongside it.</li>
+      <li>Don't change gameplay values in the middle of a run.</li>
+      <li>Before going live, run candidate values through the bot simulations to screen out broken ones.</li>
+    </ul></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="iap">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Advanced: in-game store and purchases</h2></div>
+  <p class="sec-sub">Use <b>Unity IAP</b> (the In-App Purchasing package, v5.x; 5.4.4 when this was checked) for the store-facing part, and <b>Economy</b> (UGS) if you want virtual currency and inventory on a server.</p>
+  <ol class="steps">
+    <li><b>Design the catalog first.</b> Cosmetics suit this game: <b>player car skins</b>, horn sounds, explosion colors, skid-mark trails. Add "Remove ads", and a small starter pack if you have a soft currency. Keep anything that affects gameplay out of the paid store, to protect the balance you tuned.</li>
+    <li><b>Set up products in each store:</b> Play Console → <i>Monetize → Products</i>, and App Store Connect → <i>In-App Purchases</i>. Use the same product IDs on both, e.g. <code>bb.removeads</code>, <code>bb.skin.chrome</code>. On Apple, the Paid Apps agreement, tax and banking forms must be complete first.</li>
+    <li><b>Integrate IAP v5:</b> v5 reworked the connection and purchase flow, and Unity provides AI skills for migrating from v4. From v5.4, you manage player consent with the <code>UnityConsent</code> module.</li>
+    <li><b>Validate receipts on a server</b> (Unity's validation, or Cloud Code) before granting anything valuable. Add a <b>Restore Purchases</b> button; Apple requires it for non-consumables.</li>
+    <li><b>Economy (optional):</b> currencies such as coins earned from levels, inventory items (owned skins) and virtual purchases, all held server-side so they can't be edited on the device. Store prices can be A/B tested with Game Overrides.</li>
+    <li><b>Test with sandbox and license-tester accounts</b> on both stores before review. Purchase flows are the most common cause of review rejections.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="missed">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Anything else you missed? A few things</h2></div>
+  <p class="sec-sub">These aren't in your list, but they're needed before launch or hard to add later.</p>
+  <div class="grid two">
+    <div class="card"><h4>Analytics and crash reporting</h4><p>Wire in Unity Analytics events at M5 (levels), not at launch, so playtest data starts early. Add crash and exception reporting (Unity's diagnostics, or Firebase Crashlytics).</p></div>
+    <div class="card"><h4>Saves and accounts</h4><p>Save progress locally first. Then add <b>Unity Authentication</b> (anonymous sign-in, later linked to Apple/Google) plus <b>Cloud Save</b>, so a new phone doesn't lose skins and progress.</p></div>
+    <div class="card"><h4>Onboarding</h4><p>Your next priority. Teach one mechanic per level: steer, chain-match, the repair color, junk, abilities, cops, weather. Use contextual prompts the first time each thing happens, and record which hints get skipped.</p></div>
+    <div class="card"><h4>Difficulty and progression</h4><p>Level and difficulty data in ScriptableObjects, tuned against real-player analytics, not bots. Build the persistent skill tree from the cards people actually pick.</p></div>
+    <div class="card"><h4>Accessibility</h4><p>Color plus shape coding, scalable HUD text, and toggles for haptics, camera shake and <b>flashing</b>. Lightning flashes need a "reduce flashing" option for photosensitive players.</p></div>
+    <div class="card"><h4>Performance on cheap phones</h4><p>Profile on a low-end Android early. Use pooling for cars and particles, sprite atlases, a 60 fps target and a battery check. The prototype's "60 cars at 60 fps" is the bar.</p></div>
+    <div class="card"><h4>Privacy, legal, business</h4><p>A privacy policy and terms (hosted URL), age rating, store data-safety and privacy labels, and ATT. A trademark search on "Bumper Block". Decide whether to publish as an individual or a company, and set up tax and banking.</p></div>
+    <div class="card"><h4>Localization</h4><p>Unity's Localization package. Keep every string out of code from the start, even if you only ship English.</p></div>
+    <div class="card"><h4>Store presence (ASO)</h4><p>Icon, a short gameplay trailer (the explosions and lightning are your hook), screenshots per device size, and a description with keywords. Plan to test icons too: Play Console has store listing experiments.</p></div>
+    <div class="card"><h4>Soft launch and live ops</h4><p>Launch in one or two smaller markets first and watch D1/D7 retention, session length and level funnels before going worldwide. Plan a cadence of new arenas, weather and skins.</p></div>
+    <div class="card"><h4>Community and feedback</h4><p>A Discord or subreddit, an in-game feedback link, and a TestFlight/Play testing group you can call on, so you're not limited to one tester.</p></div>
+    <div class="card"><h4>Keep the prototype alive</h4><p>It's the fastest place to try a wild idea (a new ability, a new weather type) in an afternoon before spending a week on it in Unity.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="checklist">
+  <div class="sec-head"><span class="sec-num">✓</span><h2>Master checklist</h2></div>
+  <p class="sec-sub">Ticks are saved in this browser only.</p>
+  <div class="card">
+    <ul class="check" id="checks">
+      <li><input type="checkbox" id="c1"><label for="c1">Unity ID, GitHub, Claude, Google Play ($25) and Apple Developer ($99/yr) accounts created and verified</label></li>
+      <li><input type="checkbox" id="c2"><label for="c2">Unity Hub + Unity 6.3 LTS with Android (and iOS/Web) modules installed</label></li>
+      <li><input type="checkbox" id="c3"><label for="c3">Universal 2D project; Force Text serialization; landscape-only; Physics 2D gravity 0 at 60 Hz</label></li>
+      <li><input type="checkbox" id="c4"><label for="c4"><code>bumperblock-unity</code> repo with .gitignore, .gitattributes (LFS + SmartMerge), first push</label></li>
+      <li><input type="checkbox" id="c5"><label for="c5">Claude Code installed; CLAUDE.md pointing at the prototype and the handoff doc</label></li>
+      <li><input type="checkbox" id="c6"><label for="c6">Unity plugin for Claude Code (and optionally an MCP server) connected</label></li>
+      <li><input type="checkbox" id="c7"><label for="c7">CI running tests on push (GameCI or Build Automation)</label></li>
+      <li><input type="checkbox" id="c8"><label for="c8">M1–M3 feel matches the web build side by side on a phone</label></li>
+      <li><input type="checkbox" id="c9"><label for="c9">M4–M9 ported, with matching PlayMode tests</label></li>
+      <li><input type="checkbox" id="c10"><label for="c10">CREDITS.md with every asset's license</label></li>
+      <li><input type="checkbox" id="c11"><label for="c11">Analytics events and crash reporting live in playtest builds</label></li>
+      <li><input type="checkbox" id="c12"><label for="c12">Onboarding, accessibility toggles (incl. reduce flashing), localization-ready strings</label></li>
+      <li><input type="checkbox" id="c13"><label for="c13">Android AAB on internal testing (target API 36+); iOS on TestFlight (Xcode 26)</label></li>
+      <li><input type="checkbox" id="c14"><label for="c14">Privacy policy, data-safety form, privacy labels, age ratings, store listings</label></li>
+      <li><input type="checkbox" id="c15"><label for="c15">(Optional) LevelPlay rewarded ads with consent flow</label></li>
+      <li><input type="checkbox" id="c16"><label for="c16">(Optional) Remote Config keys + first Game Overrides A/B test</label></li>
+      <li><input type="checkbox" id="c17"><label for="c17">(Optional) IAP v5: Remove ads + skins, receipt validation, Restore Purchases</label></li>
+      <li><input type="checkbox" id="c18"><label for="c18">Soft launch, then worldwide release</label></li>
+    </ul>
+    <div class="progress"><div class="bar"><i id="pbar" style="width:0%"></i></div><span id="ptext">0 of 18</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="sources">
+  <div class="sec-head"><span class="sec-num">↗</span><h2>Sources and further reading</h2></div>
+  <p class="sec-sub">Checked October 2026. Prices, versions and deadlines change, so these pages are the authority.</p>
+  <div class="grid two">
+    <div class="card"><h4>Unity</h4><ul>
+      <li><a href="https://unity.com/releases/unity-6/support">Unity 6 releases and support (LTS dates)</a></li>
+      <li><a href="https://unity.com/products">Plans and pricing</a> · <a href="https://unity.com/products/pricing-updates">pricing updates</a></li>
+      <li><a href="https://docs.unity3d.com/Manual/VersionControl.html">Version control and SmartMerge</a></li>
+      <li><a href="https://support.unity.com/hc/en-us/articles/34748492914964-Understanding-Unity-DevOps-charges">Unity DevOps (Build Automation, Version Control) charges</a></li>
+      <li><a href="https://docs.unity.com/ugs-use-cases/ABTest.html">A/B testing with Game Overrides</a></li>
+      <li><a href="https://docs.unity.com/en-us/iAP/upgrade-to-iAP-v5">Upgrade to IAP v5</a></li>
+      <li><a href="https://docs.unity.com/grow/levelplay/sdk/unity/migrate-from-unity-ads-to-levelplay">Migrate from Unity Ads to LevelPlay</a></li>
+    </ul></div>
+    <div class="card"><h4>AI tooling</h4><ul>
+      <li><a href="https://code.claude.com/docs/en/getting-started/installation">Claude Code installation</a></li>
+      <li><a href="https://docs.unity.com/en-us/ai/unity-plugin/claude-code">Unity's plugin for Claude Code</a></li>
+      <li><a href="https://unity.com/blog/unity-ai-mcp-how-to-get-started">Unity MCP: getting started</a></li>
+      <li><a href="https://github.com/CoplayDev/unity-mcp">CoplayDev/unity-mcp</a> · <a href="https://github.com/CoderGamester/mcp-unity">CoderGamester/mcp-unity</a></li>
+    </ul></div>
+    <div class="card"><h4>Stores</h4><ul>
+      <li><a href="https://developer.android.com/google/play/requirements/target-sdk">Google Play target API requirements</a></li>
+      <li><a href="https://developer.apple.com/news/upcoming-requirements/">Apple SDK minimum requirements</a></li>
+    </ul></div>
+    <div class="card"><h4>Experiments and CI</h4><ul>
+      <li><a href="https://firebase.google.com/docs/remote-config/personalization/about">Firebase Remote Config personalization (contextual bandit)</a></li>
+      <li><a href="https://game.ci/docs/github/getting-started">GameCI for GitHub Actions</a></li>
+      <li><a href="https://github.com/github/gitignore/blob/main/Unity.gitignore">Unity.gitignore template</a></li>
+    </ul></div>
+  </div>
+  <div class="callout bb"><b>In this repo</b><a href="unity-handoff.md">docs/unity-handoff.md</a> (what to keep and what's open), <a href="design.md">docs/design.md</a> (the game vision), <a href="phase1-plan.md">docs/phase1-plan.md</a> (every round's findings), <code>config.js</code> (all tuning), and <code>tests/</code> (acceptance criteria).</div>
+</section>
+
+<footer>Bumper Block · Unity migration guide · written alongside the web prototype at <a href="https://ventiduke.github.io/bumperblock/">ventiduke.github.io/bumperblock</a>.</footer>
+</main>
+</div>
+<button class="theme-btn" id="theme" type="button" aria-label="Toggle light or dark theme">◐ Theme</button>
+<script>
+(() => {
+  const KEY = 'bb-unity-guide-checks';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { state = {}; }
+  const boxes = [...document.querySelectorAll('#checks input')];
+  const bar = document.getElementById('pbar'), txt = document.getElementById('ptext');
+  const update = () => {
+    const n = boxes.filter((b) => b.checked).length;
+    bar.style.width = `${(100 * n) / boxes.length}%`;
+    txt.textContent = `${n} of ${boxes.length}`;
+  };
+  for (const b of boxes) {
+    b.checked = !!state[b.id];
+    b.addEventListener('change', () => {
+      state[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* storage blocked */ }
+      update();
+    });
+  }
+  update();
+
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('bb-guide-theme'); if (t) root.dataset.theme = t; } catch { /* storage blocked */ }
+  document.getElementById('theme').addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('bb-guide-theme', root.dataset.theme); } catch { /* storage blocked */ }
+  });
+})();
+</script>
+</body>
+</html>

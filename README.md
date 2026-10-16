@@ -22,6 +22,7 @@ and open it in a browser. All tuning values live in `config.js`.
 Before committing, run `node tools/stamp.mjs`: it version-stamps every script and
 stylesheet in `index.html` (by content hash) so a normal refresh picks up deploys.
 
+- [`docs/unity-guide.html`](https://ventiduke.github.io/bumperblock/docs/unity-guide.html) — **end-to-end setup guide**: installing Unity, the project, GitHub, Claude Code, assets, publishing, ads, A/B tests and bandits, in-app purchases
 - `docs/unity-handoff.md` — **start here for the Unity build**: what the prototype proved, each system's intent vs. how the prototype did it, lessons learned, open questions
 - `docs/design.md` — full game vision
 - `docs/phase1-plan.md` — Phase 1 architecture, assumptions, and findings
