@@ -2,6 +2,10 @@
 // the screen; a minimap shows the whole arena.
 import { CONFIG } from '../config.js';
 import { slicks } from './terrain.js';
+import { drawWeatherFloor, drawWeatherGround, drawWeatherSky, shadowFor } from './weather.js';
+
+// Car shadow offset and opacity; the weather sets it each frame.
+let shadow = shadowFor(null);
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -154,7 +158,7 @@ export function render(r, game, debug) {
   ctx.fillStyle = '#2a2e3a';
   roundRect(ctx, -0.35, -0.35, W + 0.7, H + 0.7, 0.5);
   ctx.fill();
-  ctx.fillStyle = '#20232c';
+  ctx.fillStyle = game.weather?.spec.floor ?? '#20232c';
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)';
   ctx.lineWidth = 0.04;
@@ -163,7 +167,10 @@ export function render(r, game, debug) {
   for (let y = 2; y < H; y += 2) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
   ctx.stroke();
 
+  shadow = shadowFor(game.weather?.spec);
+  drawWeatherFloor(ctx, game);
   drawTerrain(ctx);
+  drawWeatherGround(ctx, game);
 
   // Skid marks, fading out.
   if (game.marks?.length) {
@@ -251,6 +258,8 @@ export function render(r, game, debug) {
   }
   ctx.globalAlpha = 1;
 
+  drawWeatherSky(ctx, r, game, view);
+
   // Floating score text.
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -292,6 +301,24 @@ function drawMinimap(ctx, r, game, view, margin) {
   }
   ctx.fillStyle = '#5a6172';
   for (const b of CONFIG.terrain.blocks) ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
+  const w = game.weather;
+  if (w) {
+    for (const p of w.patches) {
+      ctx.fillStyle = p.type === 'puddle' ? 'rgba(90,140,200,0.45)' : 'rgba(235,240,250,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.rx, p.ry, p.a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Incoming lightning: a blinking ring.
+    ctx.strokeStyle = '#ffe98c';
+    ctx.lineWidth = 0.6;
+    for (const s of w.strikes) {
+      if (Math.sin(game.elapsed * 20) < 0) continue;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, CONFIG.weather.lightning.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
   const dot = 1.3;
   for (const car of game.cars) {
     const p = car.body.getPosition();
@@ -318,8 +345,8 @@ function drawMinimap(ctx, r, game, view, margin) {
 
 // Generic box body with shadow; windshield at the front (glass=null: none).
 function carBody(ctx, L, CW, fill, glass, glassFrom = 0.08) {
-  ctx.fillStyle = 'rgba(0,0,0,0.32)';
-  roundRect(ctx, -L / 2 + 0.08, -CW / 2 + 0.1, L, CW, 0.22);
+  ctx.fillStyle = `rgba(0,0,0,${shadow.a})`;
+  roundRect(ctx, -L / 2 + shadow.x, -CW / 2 + shadow.y, L, CW, 0.22);
   ctx.fill();
   ctx.fillStyle = fill;
   roundRect(ctx, -L / 2, -CW / 2, L, CW, 0.22);
@@ -341,8 +368,8 @@ function drawBody(ctx, car, L, CW, fill, now) {
   const glass = 'rgba(15,18,26,0.55)';
   switch (car.type) {
     case 'motorcycle':
-      ctx.fillStyle = 'rgba(0,0,0,0.32)';
-      roundRect(ctx, -L / 2 + 0.06, -CW / 2 + 0.08, L, CW, CW / 2);
+      ctx.fillStyle = `rgba(0,0,0,${shadow.a})`;
+      roundRect(ctx, -L / 2 + shadow.x * 0.8, -CW / 2 + shadow.y * 0.8, L, CW, CW / 2);
       ctx.fill();
       ctx.fillStyle = fill;
       roundRect(ctx, -L / 2, -CW / 2, L, CW, CW / 2);

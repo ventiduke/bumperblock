@@ -8,6 +8,7 @@ export const CONFIG = {
     damage: true,           // health, impact/squeeze damage, repair color
     pileups: true,          // big clumps of cars rust into junk
     upgrades: true,         // pick 1 of 3 upgrade cards after each level (off: all abilities unlocked)
+    weather: true,          // per-level weather and lighting (off: always clear)
   },
 
   // Run upgrades (see js/upgrades.js for the cards).
@@ -25,16 +26,54 @@ export const CONFIG = {
     // `types` (optional) sets the vehicle mix; otherwise vehicleMix is used.
     // `caps` (optional) overrides per-type limits, e.g. how many cops at once.
     { colors: 3, goal: { total: 15 }, par: 90, initialCars: 12, spawn: { startInterval: 1.8, minInterval: 0.8, rampTime: 90 },
-      types: { car: 70, motorcycle: 18, bus: 12 } },
+      types: { car: 70, motorcycle: 18, bus: 12 }, weather: 'sun' },
     { colors: 4, goal: { each: 6 }, par: 120, initialCars: 14, spawn: { startInterval: 1.5, minInterval: 0.6, rampTime: 100 },
-      types: { car: 60, motorcycle: 16, bus: 12, semi: 12 } },
+      types: { car: 60, motorcycle: 16, bus: 12, semi: 12 }, weather: 'rain' },
     // Police ease in: 1 at a time (and rarer) on their first level, then 2, then the full 3.
     { colors: 4, goal: { total: 35 }, par: 140, initialCars: 16, spawn: { startInterval: 1.3, minInterval: 0.5, rampTime: 100 },
-      types: { car: 58, motorcycle: 15, bus: 12, semi: 11, police: 4 }, caps: { police: 1 } },
+      types: { car: 58, motorcycle: 15, bus: 12, semi: 11, police: 4 }, caps: { police: 1 }, weather: 'wind' },
     { colors: 5, goal: { each: 6 }, par: 170, initialCars: 16, spawn: { startInterval: 1.2, minInterval: 0.45, rampTime: 120 },
-      types: { car: 56, motorcycle: 14, bus: 11, semi: 11, police: 7 }, caps: { police: 2 } },
-    { colors: 6, goal: { each: 6 }, par: 200, initialCars: 18, spawn: { startInterval: 1.1, minInterval: 0.4, rampTime: 120 } },
+      types: { car: 56, motorcycle: 14, bus: 11, semi: 11, police: 7 }, caps: { police: 2 }, weather: 'night' },
+    { colors: 6, goal: { each: 6 }, par: 200, initialCars: 18, spawn: { startInterval: 1.1, minInterval: 0.4, rampTime: 120 },
+      weather: 'snow' },
   ],
+  // Weather and atmosphere (js/weather.js). Each level names one in
+  // `levels[i].weather`; past the list they come from `cycle`. Names combine
+  // with '+', e.g. 'night+rain'. ?weather=<name> in the URL forces one
+  // (?weather=clear turns it off).
+  weather: {
+    cycle: ['storm', 'fog', 'night+rain', 'snow+wind', 'sun', 'storm+night'],
+    // Ground multipliers (grip, damping, accel, speed) stack with terrain
+    // zones. Player grip 1.0 only starts to slide below ~0.42 at full speed
+    // and full turn, so these are deliberately low.
+    presets: {
+      clear: {},
+      sun: { label: 'Sunny', icon: '☀', sun: true, floor: '#2b2e37' },
+      rain: { label: 'Rain: slick roads, cars slide further', icon: '☂', rain: 1, puddles: 6,
+        ground: { grip: 0.35, damping: 0.85 }, dark: 0.16 },
+      storm: { label: 'Storm: watch for lightning', icon: '⚡', rain: 1.6, puddles: 8, lightning: true, wind: 0.5,
+        ground: { grip: 0.3, damping: 0.85 }, dark: 0.32 },
+      snow: { label: 'Snow: low grip, drifts slow you down', icon: '❄', snow: 1, drifts: 5,
+        ground: { grip: 0.2, accel: 0.8, speed: 0.92 } },
+      night: { label: 'Night: stay in the stadium lights', icon: '☾', night: true },
+      wind: { label: 'Wind: gusts push the crowd', icon: '≋', wind: 1 },
+      fog: { label: 'Fog: watch the minimap', icon: '☁', fog: true },
+    },
+    surfaces: {
+      puddle: { grip: 0.5, damping: 0.8, accel: 1, speed: 1 },
+      drift: { grip: 1, damping: 2, accel: 0.6, speed: 0.6 },
+    },
+    // Wind: a drift velocity (m/s) for a density-1 car; heavier vehicles (and
+    // the player) drift less. Gusts multiply it for a few seconds.
+    wind: { base: 0.8, gustMult: 3, gustEvery: [5, 9], gustTime: 2.5, response: 1.5 },
+    // Lightning: a warning ring, then a strike that shoves and stuns cars,
+    // hurts the player if close, and destroys junk (it can help, too).
+    lightning: { first: 8, every: [6, 11], warn: 1.5, nearPlayer: 0.5, onJunk: 0.3,
+      radius: 3.2, shove: 10, hitRadius: 2, damage: 12, skid: 0.5 },
+    night: { darkness: 0.82, poolRadius: 9.5, headlight: 8, outageEvery: [20, 35], outageTime: 5 },
+    fog: { density: 0.86, clearRadius: 3, fadeRadius: 8 },
+    snowCoverTime: 30,      // seconds for snow to settle over the floor
+  },
   levelScaling: { goalPerLevel: 2, spawnFactor: 0.92 }, // applied per level past the list
   levelBonus: { perHealth: 2, perSecondUnderPar: 5 },
 
@@ -286,6 +325,8 @@ export const CONFIG = {
     engine: 0.035,          // engine hum loudness
     siren: 0.09,            // police siren at point-blank range
     impactMin: 3,           // impulse (N*s) below which hits make no sound
+    rain: 0.08,             // rain hiss at full intensity
+    wind: 0.12,             // wind noise in a full gust
   },
   feel: {
     hitstop: 0.09,          // seconds of freeze-frame on a big match (4+, convoy or combo)

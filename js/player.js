@@ -1,6 +1,6 @@
 // Player car: auto-throttle, steering, boost, and stuck (boxed-in) detection.
 import { CONFIG } from '../config.js';
-import { createCar, applyGrip, applyDrive, forwardOf } from './physics.js';
+import { createCar, applyGrip, applyDrive, forwardOf, windFactor } from './physics.js';
 import { surfaceAt } from './terrain.js';
 
 const pl = window.planck;
@@ -53,7 +53,7 @@ export function updatePlayer(p, dt, steer, brake = false) {
     p.skid -= dt;
     skid = p.skidGrip;
   }
-  applyGrip(body, P.lateralGrip * surf.grip * skid);
+  applyGrip(body, P.lateralGrip * surf.grip * skid, windFactor(p));
 
   const fwd = forwardOf(body);
   if (brake && !boosting) {

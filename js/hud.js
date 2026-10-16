@@ -19,6 +19,9 @@ export function createHUD() {
     health: $('health'),
     healthFill: $('health-fill'),
     repair: $('repair'),
+    weather: $('weather'),
+    weatherIcon: document.querySelector('#weather .icon'),
+    weatherWind: document.querySelector('#weather .wind'),
     boostBtn: $('boost'),
     abilityBtn: $('ability'),
     abilityLabel: $('ability-label'),
@@ -95,6 +98,23 @@ export function createHUD() {
           el.repair.title = none ? 'No repair color right now' : 'Repair color: explode these to heal';
         }
         el.health.classList.toggle('hurt', game.hurtFlash > 0.15);
+      }
+
+      const ws = game.weather?.spec;
+      if (ws && changed('weather', ws.name)) {
+        el.weather.hidden = !ws.icon;
+        el.weatherIcon.textContent = ws.icon;
+        el.weather.title = ws.label;
+        el.weatherWind.hidden = !ws.wind;
+      }
+      if (ws?.wind) {
+        const w = game.weather;
+        const deg = Math.round((w.windAngle * 180) / Math.PI / 5) * 5;
+        const k = Math.round(Math.min(1, w.windStrength / (CONFIG.weather.wind.base * ws.wind * CONFIG.weather.wind.gustMult)) * 10) / 10;
+        if (changed('wind', `${deg},${k}`)) {
+          el.weatherWind.style.transform = `rotate(${deg}deg) scale(${0.8 + 0.6 * k})`;
+          el.weatherWind.style.opacity = 0.5 + 0.5 * k;
+        }
       }
 
       // Ability: ring shows recharge, or time left (white) while active.

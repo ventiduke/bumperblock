@@ -85,11 +85,21 @@ export function rightOf(body) {
   return Vec2(-Math.sin(a), Math.cos(a));
 }
 
+// Current wind drift velocity (m/s) for a density-1 car; set by weather.js.
+export const wind = { x: 0, y: 0 };
+
+// How much a body drifts in the wind: light vehicles more, heavy ones less.
+export function windFactor(car) {
+  return Math.min(1.5, Math.max(0.25, 1 / car.solid.getDensity()));
+}
+
 // Cancel sideways sliding (tire grip), capped so hard shoves still slide.
-export function applyGrip(body, grip) {
+// `drift` > 0: grip holds the car to the wind's drift instead of to zero, so
+// a crosswind slowly carries it sideways.
+export function applyGrip(body, grip, drift = 0) {
   const right = rightOf(body);
   const v = body.getLinearVelocity();
-  const lat = Vec2.dot(right, v);
+  const lat = Vec2.dot(right, v) - (drift ? (right.x * wind.x + right.y * wind.y) * drift : 0);
   const m = body.getMass();
   let imp = -lat * m;
   const max = grip * m;

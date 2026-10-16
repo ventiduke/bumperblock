@@ -2,7 +2,7 @@
 // from walls, and stop driving for a moment after a hard hit (stun) so a
 // shoved car stays roughly where you put it.
 import { CONFIG } from '../config.js';
-import { createCar, applyGrip, applyDrive } from './physics.js';
+import { createCar, applyGrip, applyDrive, windFactor } from './physics.js';
 import { surfaceAt, obstacleAhead } from './terrain.js';
 
 const pl = window.planck;
@@ -102,7 +102,7 @@ export function updateAI(car, dt, world, game) {
   if (car.tag > 0) car.tag = Math.max(0, car.tag - dt);
   const pos = body.getPosition();
   const surf = surfaceAt(pos.x, pos.y);
-  applyGrip(body, A.lateralGrip * surf.grip);
+  applyGrip(body, A.lateralGrip * surf.grip, windFactor(car));
 
   // Junk doesn't drive; it's just heavy wreckage to push around.
   if (car.junk) {

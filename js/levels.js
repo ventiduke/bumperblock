@@ -20,6 +20,8 @@ export function getLevel(i) {
     par: base.par,
     types: base.types ?? null,
     caps: base.caps ?? {},
+    // Past the list, weather comes from CONFIG.weather.cycle.
+    weather: extra > 0 ? CONFIG.weather.cycle[(extra - 1) % CONFIG.weather.cycle.length] : base.weather ?? 'clear',
     initialCars: base.initialCars ?? CONFIG.spawn.initialCars,
     spawn: {
       startInterval: (base.spawn?.startInterval ?? CONFIG.spawn.startInterval) * f,
@@ -39,6 +41,7 @@ export function endlessLevel() {
     par: 0,
     types: null,
     caps: {},
+    weather: 'clear',
     initialCars: CONFIG.spawn.initialCars,
     spawn: {
       startInterval: CONFIG.spawn.startInterval,

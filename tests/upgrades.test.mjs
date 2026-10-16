@@ -7,7 +7,7 @@ page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') er
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 const reqs = [];
 page.on('request', r => { if (/\.(js|css)(\?|$)/.test(r.url())) reqs.push(r.url()); });
-await page.goto(URL + '?debug=1');
+await page.goto(URL + '?debug=1&weather=clear');
 await page.waitForTimeout(600);
 const ev = (fn, arg) => page.evaluate(fn, arg);
 

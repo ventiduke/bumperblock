@@ -3,7 +3,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 844, height: 390 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
-await page.goto(URL);
+await page.goto(URL + '?weather=clear');
 await page.waitForTimeout(400);
 const clean = `bumper.startLevel(3, 0); const g = bumper.game; for (const c of g.cars) g.world.destroyBody(c.body); g.cars.length = 0; g.spawner.timer = -1e9; g.repairColor = -1; g.repairTimer = 1e9;`;
 // 1. Chase: the player drives in a circle (holding right); the cop should catch up fast.

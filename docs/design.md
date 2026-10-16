@@ -174,6 +174,33 @@ Arenas have features that change how you drive and where cars pile up:
 - **Mud**: heavy drag. Top speed drops to under half.
 - Later: ramps, bumpers, conveyor strips, moving walls.
 
+## Weather and atmosphere
+
+Each level has weather. Some kinds change how you play; the rest set the mood.
+
+- **Sunny** (level 1): the baseline. Long, crisp shadows, cloud shadows
+  drifting over the arena, and a warm glare.
+- **Rain** (level 2): slick roads. You slide a little on hard turns, and
+  shoved cars slide much further. Puddles are slicker still, and they spray
+  when you drive through. Splash rings, a darker sky, and a hiss.
+- **Wind** (level 3): gusts carry the whole crowd downwind. Light vehicles
+  blow further than heavy ones, and you drift a little too. Streaks and
+  leaves show it, and an arrow in the HUD shows the direction and strength.
+- **Night** (level 4): stadium floodlights on the corners light four pools,
+  and the middle of the arena is dark. Your headlights show the road ahead,
+  cop light bars glow red and blue, and explosions light up their
+  surroundings. Now and then a floodlight flickers out for a few seconds.
+- **Snow** (level 5): low grip, so you slide on turns. Snow settles over the
+  floor, drifts slow you down, and you leave tracks.
+- **Storm** (later levels): heavy rain, wind, and **lightning**. A crackling
+  ring marks where a bolt will land 1.5 s later. About half the strikes go
+  for where you're headed. A strike shoves and stuns cars, costs you 12 HP if
+  you're too close, and destroys any junk it hits, so it can also help you.
+- **Fog** (later levels): you can only see a few meters around your car,
+  though cop lights show through. The minimap becomes essential.
+- Past level 5 they cycle, including combinations such as night with rain,
+  and snow with wind.
+
 ## Presentation
 
 - Landscape phone, full screen, two-thumb play. Holding the phone upright

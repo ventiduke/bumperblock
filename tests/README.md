@@ -19,6 +19,7 @@ and expect the exact values to change.
 | `police.test.mjs` | Police catching up, the ram shove and its damage, fast stun recovery, the per-level cap |
 | `upgrades.test.mjs` | Version stamping, the upgrade draft, each card's effect, retry vs. fresh run, the run summary |
 | `sound-feel.test.mjs` | Every sound event fires, freeze-frame, skid marks, haptics, mute persistence, 60 fps with sound |
+| `weather.test.mjs` | Weather per level, grip, puddles and drifts, wind drift by vehicle weight, lightning, night and fog visibility, 60 fps in a night storm |
 
 ## Running
 
@@ -33,6 +34,8 @@ node tests/core.test.mjs                                  # or a single suite
   `http://localhost:8080/`.
 - `PLAYWRIGHT_MODULE` points them at an existing Playwright install.
 - Screenshots go to `tests/out/`, which isn't committed.
+- The suites other than `weather.test.mjs` load the game with `?weather=clear`,
+  so weather doesn't change their physics.
 
 The tests use the page's debug hook (`window.bumper`) to set up scenarios
 directly, e.g. placing three red cars and parking the player against them,

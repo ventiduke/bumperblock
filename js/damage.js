@@ -10,7 +10,7 @@ export function initDamage(g) {
   g.repairColor = Math.floor(Math.random() * g.colors);
   g.repairTimer = CONFIG.damage.repairOnTime * (g.mods?.repairOn ?? 1);
   g.hurtFlash = 0;
-  g.damageBy = { wall: 0, boost: 0, hit: 0, cop: 0, squeeze: 0, drain: 0 }; // for tuning / debug
+  g.damageBy = { wall: 0, boost: 0, hit: 0, cop: 0, squeeze: 0, drain: 0, lightning: 0 }; // for tuning / debug
 }
 
 function hurt(g, amount, source) {
@@ -63,6 +63,16 @@ export function copRam(g, car) {
   const dmg = Math.round(car.spec.ramDamage * (g.mods?.copRam ?? 1) * 10) / 10;
   hurt(g, dmg, 'cop');
   g.hurtFlash = Math.min(1, g.hurtFlash + 0.35);
+  floatText(g.fx, p.x, p.y - 1.2, `-${dmg}`, '#ff6b6b');
+}
+
+// A lightning strike close to the player: flat damage plus feedback.
+export function shock(g, dmg) {
+  const p = g.player.body.getPosition();
+  addShake(g.fx, 0.2);
+  if (!CONFIG.features.damage) return;
+  hurt(g, dmg, 'lightning');
+  g.hurtFlash = 1;
   floatText(g.fx, p.x, p.y - 1.2, `-${dmg}`, '#ff6b6b');
 }
 

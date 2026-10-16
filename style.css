@@ -102,6 +102,23 @@ button {
 .chip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .chip.done { opacity: 0.45; text-decoration: line-through; }
 
+/* Weather chip: icon, plus an arrow showing wind direction and strength. */
+#weather {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+}
+#weather[hidden] { display: none; }
+#weather .wind { display: inline-block; font-size: 14px; font-weight: 800; color: #cfe3ff; transition: transform 0.2s; }
+#weather .wind[hidden] { display: none; }
+
 #health { display: flex; align-items: center; gap: 6px; }
 #health[hidden] { display: none; }
 #repair {

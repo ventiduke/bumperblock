@@ -10,6 +10,8 @@ let noiseBuf = null;
 let muted = false;
 let engine = null;
 let siren = null;
+let rainLoop = null;
+let windLoop = null;
 const last = {}; // throttle: sound name -> ctx time it last played
 export const counts = {}; // sound name -> times played (for tests / debug)
 
@@ -132,10 +134,39 @@ function startLoops() {
   so.start();
   lfo.start();
   siren = { g: sg };
+
+  // Rain: looped noise, high-passed into a hiss. Wind: looped noise through
+  // a bandpass whose pitch rises with the wind.
+  const loopNoise = () => {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    src.loop = true;
+    src.start();
+    return src;
+  };
+  const rf = ctx.createBiquadFilter();
+  rf.type = 'highpass';
+  rf.frequency.value = 900;
+  const rf2 = ctx.createBiquadFilter();
+  rf2.type = 'lowpass';
+  rf2.frequency.value = 7000;
+  const rg = ctx.createGain();
+  rg.gain.value = 0;
+  loopNoise().connect(rf).connect(rf2).connect(rg).connect(master);
+  rainLoop = { g: rg };
+  const wf = ctx.createBiquadFilter();
+  wf.type = 'bandpass';
+  wf.frequency.value = 300;
+  wf.Q.value = 0.8;
+  const wg = ctx.createGain();
+  wg.gain.value = 0;
+  loopNoise().connect(wf).connect(wg).connect(master);
+  windLoop = { f: wf, g: wg };
 }
 
 // Per-frame levels. speed in m/s; sirenLevel 0..1; paused silences loops.
-export function update({ speed = 0, sirenLevel = 0, paused = false }) {
+// rain: precipitation intensity (0..2); wind: drift speed in m/s.
+export function update({ speed = 0, sirenLevel = 0, paused = false, rain = 0, wind = 0 }) {
   if (!ready()) return;
   const t = ctx.currentTime;
   const A = CONFIG.audio;
@@ -144,6 +175,10 @@ export function update({ speed = 0, sirenLevel = 0, paused = false }) {
   engine.f.frequency.setTargetAtTime(220 + speed * 70, t, 0.08);
   engine.g.gain.setTargetAtTime(on * A.engine * (0.5 + Math.min(1, speed / 8)), t, 0.1);
   siren.g.gain.setTargetAtTime(on * A.siren * sirenLevel * sirenLevel, t, 0.15);
+  rainLoop.g.gain.setTargetAtTime(on * A.rain * Math.min(1.5, rain), t, 0.3);
+  const wk = Math.min(1, wind / 2.5);
+  windLoop.g.gain.setTargetAtTime(on * A.wind * wk, t, 0.25);
+  windLoop.f.frequency.setTargetAtTime(220 + 500 * wk, t, 0.3);
 }
 
 // --- one-shots -------------------------------------------------------------
@@ -261,6 +296,30 @@ export function lose() {
   const t = ctx.currentTime;
   [392, 330, 262].forEach((f, i) => tone('sawtooth', f, f * 0.97, 0.3, 0.1, t + i * 0.18));
   noise(0.6, 0.3, 'lowpass', 900, 100, 0.7, t);
+}
+
+// Thunder: a crack (close strikes) and a long low rumble. near 0..1.
+export function thunder(near = 1) {
+  if (!ready() || !throttle('thunder', 0.2)) return;
+  const t = ctx.currentTime;
+  if (near > 0.6) noise(0.25, 0.7 * near, 'highpass', 1800, 900, 0.7, t);
+  noise(1.8 + near, 0.55 * Math.max(0.3, near), 'lowpass', 500, 60, 0.6, t + (near > 0.6 ? 0.05 : 0.3));
+  tone('sine', 55, 30, 1.2, 0.3 * near, t + 0.05);
+}
+
+// Lightning about to strike: an electric crackle.
+export function crackle() {
+  if (!ready() || !throttle('crackle', 0.3)) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 6; i++) noise(0.04, 0.14, 'bandpass', 3000 + Math.random() * 3000, 2000, 3, t + i * 0.09 + Math.random() * 0.04);
+  tone('sawtooth', 120, 240, 0.6, 0.04, t);
+}
+
+// A floodlight tower cutting out (or back in).
+export function clunk(level = 1) {
+  if (!ready() || !throttle('clunk', 0.2)) return;
+  tone('square', 70, 50, 0.15, 0.18 * level);
+  noise(0.1, 0.2 * level, 'lowpass', 900, 200, 1);
 }
 
 // Phone vibration where supported (not iOS Safari). ms or a pattern.

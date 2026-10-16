@@ -500,5 +500,70 @@ respectively.
 - **`tests/`:** the 120 browser behavior checks written during development,
   made portable (`BB_URL`, the standard `playwright` import, a non-zero exit
   on failure) with a `run-all` script and a README.
-- **Tag `prototype-v1`:** marks the final prototype. The Pages build stays
-  live as the reference.
+- **Tag `prototype-v1`:** suggested, to mark the final prototype. It wasn't
+  pushed, because this environment can't push tags. If you create it, put it
+  on the latest commit on `main`, which includes weather (below). The Pages
+  build stays live as the reference.
+
+## Round 9: weather and atmosphere
+
+- **`js/weather.js`:** presets in `CONFIG.weather.presets`, combinable with
+  `+`.
+  - Each level has its own: sun, rain, wind, night, snow. Later levels cycle
+    through storm, fog, night+rain, snow+wind, sun, and storm+night.
+  - `?weather=<name>` forces one; `?weather=clear` turns it off.
+  - `features.weather` turns the whole system off.
+- **Gameplay hooks:** these are the only ways weather touches the rules.
+  - `terrain.setGround()`: ground multipliers, plus puddle and drift
+    patches, checked before the terrain zones.
+  - `physics.wind`: `applyGrip(body, grip, drift)` holds lateral velocity to
+    the wind's drift instead of to zero, and `updateWind` adds
+    mass × damping × drift as a force. A free-rolling car therefore settles
+    at exactly the drift speed, scaled by 1 / density.
+  - Lightning `strike()`: shoves and stuns cars, damages the player within
+    `hitRadius`, and destroys junk for points.
+- **Tuning found along the way:** the first pass of grip numbers (rain ×0.5,
+  snow ×0.35) didn't change the player's handling at all. The player's
+  grip cap of 1.0 only gives way below about ×0.42 at full speed and full
+  lock. Measured peak sideways slip on a full-lock turn:
+
+  | Ground grip | Peak slip |
+  | --- | --- |
+  | ×1 | 0.4 m/s |
+  | ×0.35 | 1.5 m/s |
+  | ×0.3 | 2.8 m/s |
+  | ×0.2 | 5.7 m/s |
+  | ×0.08 | 9.4 m/s |
+
+  Rain, storm and snow now use ×0.35, ×0.3 and ×0.2.
+- **Rendering:**
+  - Rain, snow and wind particles live in a 48 × 30 m tile wrapped around
+    the camera, so there's no spawning.
+  - Night and fog use a half-resolution canvas filled with darkness or fog,
+    with soft holes cut out using `destination-out`. Cop light bars and
+    explosions are then added with `lighter`.
+  - The lightning flash goes under the bolt so the bolt stays visible.
+- **HUD:** a weather chip (icon, plus a wind arrow that turns and grows with
+  gusts). The level banner is followed by a one-line toast saying what the
+  weather does.
+- **Sound:** looping rain hiss and wind noise (pitch follows the gusts),
+  thunder (a close crack or a distant rumble), a crackle before strikes, and
+  a clunk when a floodlight cuts out.
+- **Verification:** `tests/weather.test.mjs`, 36 checks:
+  - the level schedule, presets combining, and the feature toggle
+  - the HUD chip and toast
+  - grip per preset, and patches avoiding terrain
+  - shoved cars sliding further in rain
+  - the player sliding in snow
+  - drifts slowing you, and tracks in snow
+  - wind pushing light vehicles further than heavy ones, gusts, and no wind
+    elsewhere
+  - lightning's warning time, shove, junk clearing, player damage and
+    targeting
+  - night and fog luminance, and floodlight outages
+  - thunder and crackle sounds
+  - screenshots of every preset
+  - 59–60 fps in a night storm with 60 cars
+
+  The older suites now load with `?weather=clear` so their physics checks
+  stay deterministic. All 156 checks pass.

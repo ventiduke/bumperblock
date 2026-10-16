@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Bumper Block</title>
-  <link rel="stylesheet" href="style.css?v=d71f7df9">
+  <link rel="stylesheet" href="style.css?v=b4782bb3">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -19,6 +19,7 @@
       <div id="combo"></div>
     </div>
     <div id="goal"><div id="goal-label"></div><div id="goal-items"></div></div>
+    <div id="weather" hidden><span class="icon"></span><span class="wind">&#x2192;</span></div>
     <div id="health">
       <div id="repair" title="Repair color: explode these to heal"><span class="cross"></span></div>
       <div id="health-bar"><div id="health-fill"></div></div>
@@ -82,27 +83,28 @@
   <script type="importmap">
   {
     "imports": {
-      "./config.js": "./config.js?v=409fa9ba",
+      "./config.js": "./config.js?v=ea735b33",
       "./js/abilities.js": "./js/abilities.js?v=c25e1be8",
-      "./js/ai.js": "./js/ai.js?v=493854ae",
-      "./js/audio.js": "./js/audio.js?v=d4739a14",
-      "./js/damage.js": "./js/damage.js?v=fe0bc0ea",
+      "./js/ai.js": "./js/ai.js?v=a850728c",
+      "./js/audio.js": "./js/audio.js?v=5bb695b3",
+      "./js/damage.js": "./js/damage.js?v=dd9b1212",
       "./js/effects.js": "./js/effects.js?v=01992020",
-      "./js/hud.js": "./js/hud.js?v=9b43db6f",
+      "./js/hud.js": "./js/hud.js?v=381ffd1b",
       "./js/input.js": "./js/input.js?v=0644f353",
-      "./js/levels.js": "./js/levels.js?v=f0e6090e",
-      "./js/main.js": "./js/main.js?v=00601da5",
+      "./js/levels.js": "./js/levels.js?v=7a642bca",
+      "./js/main.js": "./js/main.js?v=d21f55bd",
       "./js/match.js": "./js/match.js?v=df3e4b51",
-      "./js/physics.js": "./js/physics.js?v=1b1059e2",
+      "./js/physics.js": "./js/physics.js?v=33000527",
       "./js/pileup.js": "./js/pileup.js?v=db631067",
-      "./js/player.js": "./js/player.js?v=689b09db",
-      "./js/render.js": "./js/render.js?v=e869f02f",
+      "./js/player.js": "./js/player.js?v=d1a33bed",
+      "./js/render.js": "./js/render.js?v=c2a6567c",
       "./js/spawner.js": "./js/spawner.js?v=a555c7be",
-      "./js/terrain.js": "./js/terrain.js?v=80d0e6ae",
-      "./js/upgrades.js": "./js/upgrades.js?v=e26ab28d"
+      "./js/terrain.js": "./js/terrain.js?v=55c2fb1a",
+      "./js/upgrades.js": "./js/upgrades.js?v=e26ab28d",
+      "./js/weather.js": "./js/weather.js?v=530e0fbd"
     }
   }
   </script>
-  <script type="module" src="js/main.js?v=00601da5"></script>
+  <script type="module" src="js/main.js?v=d21f55bd"></script>
 </body>
 </html>

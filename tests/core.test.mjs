@@ -5,7 +5,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-await page.goto(URL + '?debug=1');
+await page.goto(URL + '?debug=1&weather=clear');
 await page.waitForTimeout(800);
 
 const setup = (px = 4, py = 11, ang = 0, mode = 'chain') => page.evaluate(([px, py, ang, mode]) => {
@@ -155,7 +155,7 @@ ok(await page.evaluate(() => !bumper.game.over), 'play again resets');
 const pctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 const pp = await pctx.newPage();
 pp.on('pageerror', e => errors.push('portrait: ' + e.message));
-await pp.goto(URL); await pp.waitForTimeout(400);
+await pp.goto(URL + '?weather=clear'); await pp.waitForTimeout(400);
 const e0 = await pp.evaluate(() => bumper.game.elapsed); await pp.waitForTimeout(500);
 ok(await pp.evaluate(() => bumper.game.elapsed) === e0, 'portrait phone: paused behind rotate prompt');
 await pctx.close();

@@ -1,7 +1,7 @@
 # Bumper Block: Prototype → Unity Handoff
 
-The web prototype (tagged `prototype-v1`, playable at
-https://ventiduke.github.io/bumperblock/) was a tool for finding the fun. This
+The web prototype (playable at https://ventiduke.github.io/bumperblock/; the
+final build is the latest commit on `main`) was a tool for finding the fun. This
 document passes on what we learned. **It is a starting point, not a spec.**
 
 ## How to read this
@@ -408,6 +408,73 @@ purpose.
 **Room to change:** all of it. Sound quality is explicitly deferred to the
 Unity build.
 
+### 3.15 Weather and atmosphere
+
+Added after the wrap-up and not yet playtested, so treat it as a first pass.
+
+**Intent:**
+- Each level feels like a different place.
+- A few weather types change how you play, each in one clear way:
+  - Rain and snow: grip.
+  - Wind: the crowd drifts.
+  - Night and fog: what you can see.
+  - Storms: a hazard you can turn to your advantage.
+- None of it should take away the player's control or make the game
+  unreadable.
+
+**How the prototype did it** (`js/weather.js`). Presets combine, e.g.
+`night+rain`:
+- **Grip:** a multiplier on the ground's grip, damping, acceleration and top
+  speed, applied on top of the terrain zones. It also adds puddle and drift
+  patches.
+- **Wind:** a drift velocity.
+  - Every car is pushed toward it with a force of mass × damping × drift.
+  - Tire grip then holds each car to the drift instead of to zero, so a
+    crosswind carries cars sideways.
+  - Drift is scaled by 1 / density, so motorcycles blow further than buses,
+    and the heavy player car drifts least.
+- **Lightning:** a 1.5 s warning ring, then the strike:
+  - Cars within 3.2 m are shoved and stunned.
+  - The player takes 12 HP within 2 m.
+  - Junk within range is destroyed.
+- **Night and fog:** a half-resolution darkness layer with soft holes cut out:
+  - Night: floodlight pools, headlights, a small glow on every car, larger
+    glows for cops and explosions.
+  - Fog: a clear radius around the player.
+- **Atmosphere:**
+  - rain streaks and splash rings
+  - snowfall and snow settling over the floor
+  - tracks in the snow
+  - leaves and wind streaks
+  - cloud shadows and sun glare, plus a shadow offset that changes with the
+    weather
+  - looping rain and wind noise, thunder, a crackle before a strike, and a
+    clunk when a floodlight cuts out
+
+**Starting numbers:**
+
+| Weather | Ground grip | Other |
+| --- | --- | --- |
+| Rain | ×0.35 | Puddles ×0.5 on top of that |
+| Storm | ×0.3 | Lightning every 6–11 s |
+| Snow | ×0.2 | Drifts: speed ×0.6 |
+| Wind | — | 0.8 m/s drift, gusts ×3 every 5–9 s |
+
+- The player's grip only starts to give way below about ×0.42 at full speed
+  and full lock. Rain is therefore a small slide for the player, and mostly
+  shows up as AI cars sliding further.
+- For reference, one full-lock turn's peak sideways slip: about 0.4 m/s
+  clear, 1.5 m/s in rain, 2.8 m/s in a storm, 5.7 m/s in snow, and 9.4 m/s
+  on ice.
+
+**Room to change:**
+- Everything here. Real particle systems, lights and post-processing in
+  Unity will look nothing like this.
+- Whether weather should be tied to the arena layout or the level, be
+  random, or change partway through a level.
+- How strong each effect should be, in particular snow grip and how often
+  lightning goes for the player.
+
 ---
 
 ## 4. Lessons learned
@@ -468,6 +535,10 @@ Unity or new playtests point elsewhere.
 - **Readability at scale:** six colors, five vehicle types, junk, slicks, and
   three cops on a phone screen at once. Accessibility for colorblind players
   (shapes or patterns per color) hasn't been addressed.
+- **Weather balance:** not playtested yet. Unknowns:
+  - whether snow is too slippery
+  - whether fog and night are too dark on a real phone in daylight
+  - whether lightning feels fair
 - **Performance target:** the prototype held 60 fps with 60–80 cars in a
   browser. Unity's budget and art will change this.
 
@@ -487,13 +558,13 @@ Unity or new playtests point elsewhere.
 | Tow rope | `DistanceJoint2D` with `maxDistanceOnly`, or a `SpringJoint2D` |
 | `config.js` | ScriptableObjects per system, so designers can keep tuning in the editor |
 | Union-find matching | Same algorithm over trigger overlaps; it's engine-agnostic |
+| Weather visuals | Particle systems for rain and snow, URP 2D lights for night (Light2D on towers, headlights, light bars), and a fog shader or volume |
 
 ---
 
 ## 8. Reference
 
-- **Playable build:** https://ventiduke.github.io/bumperblock/ (git tag
-  `prototype-v1`). Add `?debug=1` for collision shapes, contact links, FPS and
+- **Playable build:** https://ventiduke.github.io/bumperblock/. Add `?debug=1` for collision shapes, contact links, FPS and
   live stats.
 - **All tuning values:** `config.js`, commented.
 - **Behavior tests:** `tests/` (see its README). They read as a checklist of
@@ -518,4 +589,5 @@ Unity or new playtests point elsewhere.
 | `js/levels.js` | Level definitions and scaling |
 | `js/terrain.js` | Blocks and surface zones |
 | `js/audio.js` | Synthesized sound |
+| `js/weather.js` | Weather presets, wind, lightning, darkness and fog |
 | `js/main.js` | Game loop and the glue between systems |

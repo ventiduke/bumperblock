@@ -40,18 +40,41 @@ export function clearSlicks() {
   slicks.length = 0;
 }
 
-// Handling multipliers at a point (slicks first, then the first matching zone).
+// Weather: ground multipliers for the whole arena, plus weather patches
+// (puddles, snow drifts) as ellipses { type, x, y, rx, ry }.
+export const patches = [];
+let surf = { normal: NORMAL };
+
+const mul = (a, b) => ({
+  grip: a.grip * (b.grip ?? 1), damping: a.damping * (b.damping ?? 1),
+  accel: a.accel * (b.accel ?? 1), speed: a.speed * (b.speed ?? 1),
+});
+
+export function setGround(ground = {}, list = []) {
+  const T = CONFIG.terrain;
+  const types = { ...T.types, ...CONFIG.weather.surfaces };
+  surf = { normal: mul(NORMAL, ground) };
+  for (const [k, v] of Object.entries(types)) surf[k] = mul(v, ground);
+  patches.length = 0;
+  patches.push(...list);
+}
+
+// Handling multipliers at a point (slicks first, then weather patches, then
+// the first matching zone), with the weather's ground multipliers applied.
 export function surfaceAt(x, y) {
   const T = CONFIG.terrain;
   for (const s of slicks) {
-    if ((x - s.x) ** 2 + (y - s.y) ** 2 <= s.r * s.r) return T.types.ice;
+    if ((x - s.x) ** 2 + (y - s.y) ** 2 <= s.r * s.r) return surf.ice;
+  }
+  for (const p of patches) {
+    if (((x - p.x) / p.rx) ** 2 + ((y - p.y) / p.ry) ** 2 <= 1) return surf[p.type];
   }
   for (const z of T.zones) {
     if (Math.abs(x - z.x) <= z.w / 2 && Math.abs(y - z.y) <= z.h / 2) {
-      return T.types[z.type] || NORMAL;
+      return surf[z.type] || surf.normal;
     }
   }
-  return NORMAL;
+  return surf.normal;
 }
 
 // Surface normal of the nearest static fixture within `dist` ahead of the

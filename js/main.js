@@ -17,6 +17,7 @@ import { abilityLabel } from './abilities.js';
 import * as sfx from './audio.js';
 import { updatePileups, clearJunkNear } from './pileup.js';
 import { initAbilities, useAbility, cycleAbility, selectAbility, updateAbilities } from './abilities.js';
+import { createWeather, updateWeather, weatherExplosion, strike } from './weather.js';
 
 const pl = window.planck;
 const params = new URLSearchParams(location.search);
@@ -33,6 +34,8 @@ let equipped = new URLSearchParams(location.search).get('ability');
 if (!CONFIG.abilities.list.includes(equipped)) equipped = null;
 // The current run's upgrade picks; reset when starting over from level 1.
 let run = newRun();
+// ?weather=<name> forces the weather on every level (e.g. storm, night+rain, clear).
+let weatherOverride = params.get('weather');
 
 function emptyMatchInfo() {
   return { links: [], playerLinks: [], groups: [], primed: [], ready: [] };
@@ -84,6 +87,7 @@ function newGame(levelIndex = 0, startScore = 0) {
   g.marks = [];     // skid marks: { x1, y1, x2, y2, life }
   g.hitstop = 0;    // seconds of freeze-frame left
   createTerrain(world);
+  g.weather = createWeather(weatherOverride ?? level.weather);
   g.player = createPlayer(world);
   g.player.mods = g.mods;
   if (!g.unlocked.includes(equipped)) equipped = g.unlocked[0];
@@ -201,6 +205,7 @@ function explode(g, group) {
     const col = CONFIG.colors[car.color];
     burst(g.fx, p.x, p.y, col, CONFIG.fx.particlesPerCar, 9, 0.7, 0.28);
     burst(g.fx, p.x, p.y, '#ffffff', 4, 6, 0.35, 0.18);
+    weatherExplosion(g, p.x, p.y);
     car.dead = true;
     g.world.destroyBody(car.body);
   }
@@ -269,7 +274,8 @@ function updateSkidMarks(g, dt) {
   const slip = Math.abs(-Math.sin(a) * v.x + Math.cos(a) * v.y);
   const L = CONFIG.car.length, W = CONFIG.car.width;
   const wheels = [b.getWorldPoint(pl.Vec2(-L * 0.32, -W * 0.4)), b.getWorldPoint(pl.Vec2(-L * 0.32, W * 0.4))];
-  if ((slip > F.skidSlip || p.skid > 0) && v.length() > 1 && p.prevWheels) {
+  // In snow you always leave tracks.
+  if ((slip > F.skidSlip || p.skid > 0 || g.weather.spec.snow) && v.length() > 1 && p.prevWheels) {
     for (let i = 0; i < 2; i++) {
       g.marks.push({ x1: p.prevWheels[i].x, y1: p.prevWheels[i].y, x2: wheels[i].x, y2: wheels[i].y, life: F.skidLife });
     }
@@ -296,11 +302,13 @@ function runSummary(g) {
   ];
   if (st.convoys) rows.push(['Convoys', st.convoys]);
   if (st.junk) rows.push(['Junk cleared', st.junk]);
+  const ws = g.weather.stats;
+  if (ws.strikes) rows.push(['Lightning', `${ws.strikes} strikes${ws.zapped ? `, hit you ${ws.zapped}` : ''}${ws.junk ? `, cleared ${ws.junk} junk` : ''}`]);
   const ab = Object.entries(st.abilities).map(([a, n]) => `${abilityLabel(a).toLowerCase()} ${n}`).join(' · ');
   rows.push(['Abilities used', ab || 'none']);
   if (CONFIG.features.damage) {
     const total = Object.values(g.damageBy).reduce((a, b) => a + b, 0);
-    const names = { wall: 'walls', boost: 'boost-rams', hit: 'hits', cop: 'cops', squeeze: 'squeezed', drain: 'wear' };
+    const names = { wall: 'walls', boost: 'boost-rams', hit: 'hits', cop: 'cops', squeeze: 'squeezed', drain: 'wear', lightning: 'lightning' };
     const top = Object.entries(g.damageBy).filter(([, v]) => v >= 0.5).sort((a, b) => b[1] - a[1]).slice(0, 3)
       .map(([k, v]) => `${names[k] || k} ${Math.round((100 * v) / total)}%`).join(' · ');
     rows.push(['Damage taken', total >= 0.5 ? `${Math.round(total)} HP: ${top}` : 'none']);
@@ -344,6 +352,7 @@ function step(g, dt) {
     updateAI(car, dt, g.world, g);
     if (car.flash > 0) car.flash = Math.max(0, car.flash - dt * 4);
   }
+  updateWeather(g, dt);
 
   const P = CONFIG.physics;
   g.world.step(dt, P.velocityIterations, P.positionIterations);
@@ -393,7 +402,14 @@ function startLevel(index, score) {
   hud.hidePanels();
   accumulator = 0;
   if (CONFIG.features.levels) hud.announce(`Level ${index + 1}: ${goalText(game.level)}`);
+  // Then what the weather does, once the level banner has had its moment.
+  const g = game;
+  clearTimeout(weatherToast);
+  if (g.weather.spec.label) {
+    weatherToast = setTimeout(() => { if (game === g && !g.over) hud.announce(g.weather.spec.label); }, CONFIG.features.levels ? 2600 : 0);
+  }
 }
+let weatherToast = 0;
 
 // Retry the current level with the score it started with.
 function restart() {
@@ -441,7 +457,11 @@ function updateSound(g, paused) {
     const q = c.body.getPosition();
     siren = Math.max(siren, 1 - Math.hypot(q.x - pp.x, q.y - pp.y) / c.spec.chaseRange);
   }
-  sfx.update({ speed: p.getLinearVelocity().length(), sirenLevel: Math.max(0, siren), paused: stopped });
+  const w = g.weather;
+  sfx.update({
+    speed: p.getLinearVelocity().length(), sirenLevel: Math.max(0, siren), paused: stopped,
+    rain: w.spec.rain || 0, wind: w.spec.wind ? w.windStrength : 0,
+  });
   if (stopped) return;
   if (CONFIG.features.damage && g.health < g.maxHealth * 0.25) sfx.heartbeat();
   if (g.player.stuckTimer > 0.6) sfx.warn();
@@ -532,6 +552,9 @@ window.bumper = {
   nextLevel,
   fromStart,
   chooseCard,
+  // Force a weather on every level (null: back to each level's own) and restart.
+  setWeather(name) { weatherOverride = name; restart(); },
+  strike: (x, y) => strike(game, x, y),
   get run() { return run; },
   sfx,
   step: (n = 1) => { for (let i = 0; i < n; i++) step(game, DT); },

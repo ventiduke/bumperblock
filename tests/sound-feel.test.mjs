@@ -6,7 +6,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-await page.goto(URL + '?debug=1');
+await page.goto(URL + '?debug=1&weather=clear');
 await page.waitForTimeout(500);
 const ev = (fn, arg) => page.evaluate(fn, arg);
 const clean = () => ev(() => {
