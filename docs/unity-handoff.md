@@ -542,6 +542,22 @@ Unity or new playtests point elsewhere.
 - **Performance target:** the prototype held 60 fps with 60–80 cars in a
   browser. Unity's budget and art will change this.
 
+### Next priorities
+
+These are in the playtester's order, for after the Unity build reaches
+parity with the prototype:
+
+1. **Onboarding:** teach the mechanics one at a time. They include chain
+   matching, repair windows, pile-ups, abilities, cops and weather.
+2. **Difficulty:** a curve tuned against real players, not bots.
+3. **Progression:** the persistent skill tree and prestige, built from the
+   upgrade cards players keep picking.
+4. **Style and polish:**
+   - player car skins
+   - a horn, and custom sounds for each vehicle type
+   - real sound design
+   - general fine-tuning
+
 ---
 
 ## 7. Possible Unity mapping (suggestions only)
